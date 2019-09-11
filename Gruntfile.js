@@ -8,11 +8,20 @@ module.exports = function(grunt) {
         src: 'src/<%= pkg.name %>.coffee',
         dest: 'build/<%= pkg.name %>.js'
       }
+    },
+    watch: {
+      files: 'src/<%= pkg.name %>.coffee',
+      tasks: ['coffee'],
+      options: {
+        spawn: false,
+        event: 'changed'
+      }
     }
   });
 
-  // Load the plugin that provides the "uglify" task.
+  // Load the plugin task plugins.
   grunt.loadNpmTasks('grunt-contrib-coffee');
+  grunt.loadNpmTasks('grunt-contrib-watch');
 
   // Default task(s).
   grunt.registerTask('default', ['coffee']);
