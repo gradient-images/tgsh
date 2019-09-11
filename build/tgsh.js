@@ -1,5 +1,7 @@
 (function() {
-  var Node, bold, canvas, draw, fontFamily, fontHeight, fontWidth, minNameWidth, n, nameFadeRad, nameFadeWidth, noTypoRad, raid, regular, resizeInteract, timer, vp, wheelInteract;
+  var Node, bold, canvas, draw, fontFamily, fontHeight, fontWidth, graph, minNameWidth, n, nameFadeRad, nameFadeWidth, noTypoRad, raid, regular, resizeInteract, timer, vp, wheelInteract;
+
+  graph = '{ "name": "Nyulcsapda", "kids": [{ "name": "VFX", "kids": [{ "name": "Sc_1" }] }, { "name": "Grade" }, { "name": "Edit" }, { "name": "In" } ]}';
 
   fontHeight = 18;
 
@@ -27,7 +29,7 @@
 
   vp = {
     scale: 1,
-    fit_ratio: 0.9,
+    separation: 0.9,
     update: function() {
       var h, w;
       w = window.innerWidth;
@@ -43,22 +45,39 @@
   };
 
   Node = class Node {
-    constructor(name, x, y, rad) {
-      var ctx, nameMeasure;
-      this.name = name;
-      this.x = x;
-      this.y = y;
-      this.rad = rad;
+    static fromJSON(nodesJSON) {
+      var node, obj;
+      obj = JSON.parse(nodesJSON);
+      return node = Object.assign(new Node(obj), obj);
+    }
+
+    constructor(obj) {
+      var ctx, kid, nameMeasure;
+      this.x = 0;
+      this.y = 0;
+      this.rad = 1;
       ctx = canvas.getContext('2d');
       ctx.font = bold;
       nameMeasure = ctx.measureText(this.name + ' ');
       this.nameWidth = nameMeasure.width;
+      if (obj.kids) {
+        obj.kids = (function() {
+          var i, len, ref, results;
+          ref = obj.kids;
+          results = [];
+          for (i = 0, len = ref.length; i < len; i++) {
+            kid = ref[i];
+            results.push(Object.assign(new Node(kid), kid));
+          }
+          return results;
+        })();
+      }
     }
 
     draw(ctx) {
       var dispRad, nx, ny, typoBase;
       // Calculate details
-      dispRad = n.rad * vp.min * vp.fit_ratio / 2 * vp.scale;
+      dispRad = n.rad * vp.min * vp.separation / 2 * vp.scale;
       ctx.save();
       // Outline
       ctx.beginPath();
@@ -86,8 +105,8 @@
         ctx.font = bold;
         ctx.textBaseline = 'middle';
         ctx.fillText(this.name, nx, ny);
+        return ctx.restore();
       }
-      return ctx.restore();
     }
 
   };
@@ -120,7 +139,10 @@
     return raid = window.requestAnimationFrame(draw);
   };
 
-  n = new Node("File Name", 0, 0, 1);
+  // Init from here on, just like that. See `graph` at the top.
+  n = Node.fromJSON(graph);
+
+  console.log(n);
 
   if (canvas.getContext) {
     vp.update();

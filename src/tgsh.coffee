@@ -1,3 +1,20 @@
+graph = '{
+  "name": "Nyulcsapda",
+  "kids": [{
+    "name": "VFX",
+    "kids": [{
+      "name": "Sc_1"
+      }]
+  }, {
+    "name": "Grade"
+  }, {
+    "name": "Edit"
+  }, {
+    "name": "In"
+  }
+]}
+'
+
 fontHeight = 18
 fontWidth = fontHeight * .75
 fontFamily = 'Roboto Mono'
@@ -15,7 +32,7 @@ canvas = document.getElementById('canvas')
 
 vp =
   scale: 1
-  fit_ratio: 0.9
+  separation: 0.9
   update: ->
     w = window.innerWidth
     h = window.innerHeight
@@ -31,16 +48,26 @@ vp =
 
 
 class Node
-  constructor: (@name, @x, @y, @rad) ->
+  @fromJSON: (nodesJSON) ->
+    obj = JSON.parse(nodesJSON)
+    node = Object.assign(new Node(obj), obj)
+
+  constructor: (obj) ->
+    @x = 0
+    @y = 0
+    @rad = 1
+
     ctx = canvas.getContext('2d')
     ctx.font = bold
     nameMeasure = ctx.measureText(@name + ' ')
-
     @nameWidth = nameMeasure.width
+
+    if obj.kids
+      obj.kids = (Object.assign(new Node(kid), kid) for kid in obj.kids)
 
   draw: (ctx) ->
     # Calculate details
-    dispRad = n.rad * vp.min * vp.fit_ratio / 2 * vp.scale
+    dispRad = n.rad * vp.min * vp.separation / 2 * vp.scale
 
     ctx.save()
 
@@ -73,7 +100,7 @@ class Node
       ctx.textBaseline = 'middle'
       ctx.fillText(@name, nx, ny)
 
-    ctx.restore()
+      ctx.restore()
 
 
 draw = ->
@@ -103,8 +130,10 @@ wheelInteract = (event) ->
   vp.scale = scale
   raid = window.requestAnimationFrame(draw)
 
+# Init from here on, just like that. See `graph` at the top.
 
-n = new Node("File Name", 0, 0, 1)
+n = Node.fromJSON(graph)
+console.log(n)
 
 if canvas.getContext
   vp.update()
