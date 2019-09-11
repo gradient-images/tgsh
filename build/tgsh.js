@@ -1,7 +1,7 @@
 (function() {
-  var Node, bold, canvas, draw, fontFamily, fontHeight, fontWidth, graph, minNameWidth, n, nameFadeRad, nameFadeWidth, noTypoRad, raid, regular, resizeInteract, timer, vp, wheelInteract;
+  var Node, bold, canvas, draw, fontFamily, fontHeight, fontWidth, graph, minNameWidth, nameFadeRad, nameFadeWidth, noTypoRad, pi2, raid, regular, resizeInteract, root, timer, vp, wheelInteract;
 
-  graph = '{ "name": "Nyulcsapda", "kids": [{ "name": "VFX", "kids": [{ "name": "Sc_1" }] }, { "name": "Grade" }, { "name": "Edit" }, { "name": "In" } ]}';
+  graph = '{ "name": "Nyulcsapda", "kids": [{ "name": "VFX", "kids": [{ "name": "Sc_1" }, { "name": "Sc_2" }, { "name": "Sc_3" }] }, { "name": "Grade" }, { "name": "Asset" }, { "name": "Edit" }, { "name": "In" } ]}';
 
   fontHeight = 18;
 
@@ -20,6 +20,8 @@
   nameFadeWidth = 2 * fontWidth;
 
   nameFadeRad = Math.sqrt((nameFadeWidth / 2) ** 2 + (fontHeight / 2) ** 2);
+
+  pi2 = Math.PI * 2;
 
   raid = 0;
 
@@ -58,15 +60,15 @@
       this.rad = 1;
       ctx = canvas.getContext('2d');
       ctx.font = bold;
-      nameMeasure = ctx.measureText(this.name + ' ');
+      nameMeasure = ctx.measureText(obj.name + ' ');
       this.nameWidth = nameMeasure.width;
       if (obj.kids) {
         obj.kids = (function() {
-          var i, len, ref, results;
+          var j, len, ref, results;
           ref = obj.kids;
           results = [];
-          for (i = 0, len = ref.length; i < len; i++) {
-            kid = ref[i];
+          for (j = 0, len = ref.length; j < len; j++) {
+            kid = ref[j];
             results.push(Object.assign(new Node(kid), kid));
           }
           return results;
@@ -74,14 +76,36 @@
       }
     }
 
+    layout(x, y, rad) {
+      var i, j, kid, kidRad, kidRing, len, nKids, ref, results, slice;
+      this.x = x;
+      this.y = y;
+      this.rad = rad;
+      if (this.kids) {
+        nKids = this.kids.length;
+        kidRad = Math.sqrt(rad ** 2 / nKids);
+        kidRing = rad + kidRad;
+        slice = pi2 / nKids;
+        ref = this.kids;
+        results = [];
+        for (i = j = 0, len = ref.length; j < len; i = ++j) {
+          kid = ref[i];
+          results.push(kid.layout(Math.sin(slice * i) * kidRing + x, -Math.cos(slice * i) * kidRing + y, kidRad));
+        }
+        return results;
+      }
+    }
+
     draw(ctx) {
-      var dispRad, nx, ny, typoBase;
+      var dispRad, dispX, dispY, j, kid, len, nx, ref, results, typoBase;
       // Calculate details
-      dispRad = n.rad * vp.min * vp.separation / 2 * vp.scale;
+      dispRad = this.rad * vp.min * vp.separation / 2 * vp.scale;
+      dispX = vp.cx + (this.x * vp.min * vp.separation / 2 * vp.scale);
+      dispY = vp.cy + (this.y * vp.min * vp.separation / 2 * vp.scale);
       ctx.save();
       // Outline
       ctx.beginPath();
-      ctx.arc(vp.cx, vp.cy, dispRad, 0, Math.PI * 2, 0);
+      ctx.arc(dispX, dispY, dispRad, 0, pi2, 0);
       ctx.fill();
       ctx.clip();
       // Name
@@ -91,21 +115,29 @@
         // Align
         if (typoBase > this.nameWidth) {
           ctx.textAlign = 'center';
-          nx = vp.cx;
+          nx = dispX;
         } else {
           ctx.textAlign = 'left';
-          nx = vp.cx - typoBase / 2 + fontWidth / 2;
+          nx = dispX - typoBase / 2 + fontWidth / 2;
         }
         if (dispRad > nameFadeRad) {
           ctx.globalAlpha = 1;
         } else {
           ctx.globalAlpha = (dispRad - noTypoRad) / (nameFadeRad - noTypoRad);
         }
-        ny = vp.cy;
         ctx.font = bold;
         ctx.textBaseline = 'middle';
-        ctx.fillText(this.name, nx, ny);
-        return ctx.restore();
+        ctx.fillText(this.name, nx, dispY);
+      }
+      ctx.restore();
+      if (this.kids) {
+        ref = this.kids;
+        results = [];
+        for (j = 0, len = ref.length; j < len; j++) {
+          kid = ref[j];
+          results.push(kid.draw(ctx));
+        }
+        return results;
       }
     }
 
@@ -116,7 +148,8 @@
     ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, vp.width, vp.height);
     ctx.save();
-    n.draw(ctx);
+    root.layout(0, 0, 1);
+    root.draw(ctx);
     t = performance.now();
     ctx.font = regular;
     ctx.textAlign = 'left';
@@ -140,9 +173,9 @@
   };
 
   // Init from here on, just like that. See `graph` at the top.
-  n = Node.fromJSON(graph);
+  root = Node.fromJSON(graph);
 
-  console.log(n);
+  console.log(root);
 
   if (canvas.getContext) {
     vp.update();

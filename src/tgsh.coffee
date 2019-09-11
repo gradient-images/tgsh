@@ -4,9 +4,15 @@ graph = '{
     "name": "VFX",
     "kids": [{
       "name": "Sc_1"
-      }]
+    }, {
+      "name": "Sc_2"
+    }, {
+      "name": "Sc_3"
+    }]
   }, {
     "name": "Grade"
+  }, {
+    "name": "Asset"
   }, {
     "name": "Edit"
   }, {
@@ -24,6 +30,7 @@ minNameWidth = 1 * fontWidth
 noTypoRad = Math.sqrt((minNameWidth / 2) ** 2 + (fontHeight / 2) ** 2)
 nameFadeWidth = 2 * fontWidth
 nameFadeRad = Math.sqrt((nameFadeWidth / 2) ** 2 + (fontHeight / 2) ** 2)
+pi2 = Math.PI * 2
 
 raid = 0
 timer = performance.now()
@@ -59,21 +66,34 @@ class Node
 
     ctx = canvas.getContext('2d')
     ctx.font = bold
-    nameMeasure = ctx.measureText(@name + ' ')
+    nameMeasure = ctx.measureText(obj.name + ' ')
     @nameWidth = nameMeasure.width
 
     if obj.kids
       obj.kids = (Object.assign(new Node(kid), kid) for kid in obj.kids)
 
+  layout: (x, y, rad) ->
+    @x = x
+    @y = y
+    @rad = rad
+    if @kids
+      nKids = @kids.length
+      kidRad = Math.sqrt(rad ** 2 / nKids)
+      kidRing = rad + kidRad
+      slice = pi2 / nKids
+      kid.layout(Math.sin(slice * i) * kidRing + x, -Math.cos(slice * i) * kidRing + y, kidRad) for kid, i in @kids
+
   draw: (ctx) ->
     # Calculate details
-    dispRad = n.rad * vp.min * vp.separation / 2 * vp.scale
+    dispRad = @rad * vp.min * vp.separation / 2 * vp.scale
+    dispX = vp.cx + (@x * vp.min * vp.separation / 2 * vp.scale)
+    dispY = vp.cy + (@y * vp.min * vp.separation / 2 * vp.scale)
 
     ctx.save()
 
     # Outline
     ctx.beginPath()
-    ctx.arc(vp.cx, vp.cy, dispRad, 0, Math.PI*2, 0)
+    ctx.arc(dispX, dispY, dispRad, 0, pi2, 0)
     ctx.fill()
     ctx.clip()
 
@@ -85,22 +105,24 @@ class Node
       # Align
       if typoBase > @nameWidth
         ctx.textAlign = 'center'
-        nx = vp.cx
+        nx = dispX
       else
         ctx.textAlign = 'left'
-        nx = vp.cx - typoBase / 2 + fontWidth / 2
+        nx = dispX - typoBase / 2 + fontWidth / 2
 
       if dispRad > nameFadeRad
         ctx.globalAlpha = 1
       else
         ctx.globalAlpha = (dispRad - noTypoRad) / (nameFadeRad - noTypoRad)
 
-      ny = vp.cy
       ctx.font = bold
       ctx.textBaseline = 'middle'
-      ctx.fillText(@name, nx, ny)
+      ctx.fillText(@name, nx, dispY)
 
-      ctx.restore()
+    ctx.restore()
+
+    if @kids
+      kid.draw(ctx) for kid in @kids
 
 
 draw = ->
@@ -109,7 +131,8 @@ draw = ->
   ctx.clearRect(0, 0, vp.width, vp.height)
   ctx.save()
 
-  n.draw(ctx)
+  root.layout(0, 0, 1)
+  root.draw(ctx)
 
   t = performance.now()
   ctx.font = regular
@@ -132,8 +155,8 @@ wheelInteract = (event) ->
 
 # Init from here on, just like that. See `graph` at the top.
 
-n = Node.fromJSON(graph)
-console.log(n)
+root = Node.fromJSON(graph)
+console.log(root)
 
 if canvas.getContext
   vp.update()
