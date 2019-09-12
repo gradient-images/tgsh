@@ -1,9 +1,9 @@
 (function() {
   var Node, bold, canvas, draw, fontFamily, fontHeight, fontWidth, graph, minNameWidth, nameFadeRad, nameFadeWidth, noTypoRad, pi2, raid, regular, resizeInteract, root, timer, vp, wheelInteract;
 
-  graph = '{ "name": "Nyulcsapda", "kids": [{ "name": "VFX", "kids": [{ "name": "Sc_1" }, { "name": "Sc_2" }, { "name": "Sc_3" }] }, { "name": "Grade" }, { "name": "Asset" }, { "name": "Edit" }, { "name": "In" } ]}';
+  graph = '{ "name": "Nyulcsapda", "kids": [{ "name": "VFX", "kids": [{ "name": "Sc_1" }, { "name": "Sc_2", "kids": [{ "name": "Comp" }, { "name": "Plate" }] }, { "name": "Sc_3" }, { "name": "Sc_4" }, { "name": "Sc_5" }] }, { "name": "Grade" }, { "name": "Asset" }, { "name": "Edit" }, { "name": "In" }, { "name": "Out" } ]}';
 
-  fontHeight = 18;
+  fontHeight = 14;
 
   fontWidth = fontHeight * .75;
 
@@ -30,8 +30,8 @@
   canvas = document.getElementById('canvas');
 
   vp = {
-    scale: 1,
-    separation: 0.9,
+    scale: .5,
+    separation: 1.1,
     update: function() {
       var h, w;
       w = window.innerWidth;
@@ -42,7 +42,8 @@
       this.height = h;
       this.cx = w / 2;
       this.cy = h / 2;
-      return this.min = Math.min(w, h);
+      this.min = Math.min(w, h);
+      return this.unit = this.min / this.separation / 2 * this.scale;
     }
   };
 
@@ -77,32 +78,57 @@
     }
 
     layout(x, y, rad) {
-      var i, j, kid, kidRad, kidRing, len, nKids, ref, results, slice;
+      var full, i, j, kid, kidRad, kidRing, len, nKids, od, ref, results, slice, start;
       this.x = x;
       this.y = y;
       this.rad = rad;
       if (this.kids) {
         nKids = this.kids.length;
         kidRad = Math.sqrt(rad ** 2 / nKids);
-        kidRing = rad + kidRad;
-        slice = pi2 / nKids;
+        kidRing = (rad + kidRad) * vp.separation;
+        od = Math.sqrt(x ** 2 + y ** 2);
+        if (rad === 1) {
+          slice = pi2 / nKids;
+          start = 0;
+        } else {
+          full = Math.asin(rad / od) * 2;
+          slice = full / nKids;
+          start = -slice * (nKids / 2 - .5);
+          kidRing = (kidRad * 2 * nKids / vp.separation) / (full * Math.PI / 2);
+        }
         ref = this.kids;
         results = [];
         for (i = j = 0, len = ref.length; j < len; i = ++j) {
           kid = ref[i];
-          results.push(kid.layout(Math.sin(slice * i) * kidRing + x, -Math.cos(slice * i) * kidRing + y, kidRad));
+          results.push(kid.layout(Math.sin(start + slice * i) * (od + kidRing), -Math.cos(start + slice * i) * (od + kidRing), kidRad));
         }
         return results;
       }
     }
 
     draw(ctx) {
-      var dispRad, dispX, dispY, j, kid, len, nx, ref, results, typoBase;
+      var dispRad, dispX, dispY, i, j, k, kdX, kdY, kid, len, nx, ref, results, typoBase;
       // Calculate details
-      dispRad = this.rad * vp.min * vp.separation / 2 * vp.scale;
-      dispX = vp.cx + (this.x * vp.min * vp.separation / 2 * vp.scale);
-      dispY = vp.cy + (this.y * vp.min * vp.separation / 2 * vp.scale);
+      dispRad = this.rad * vp.unit;
+      dispX = vp.cx + this.x * vp.unit;
+      dispY = vp.cy + this.y * vp.unit;
       ctx.save();
+      // Draw lines
+      if (this.kids) {
+        ctx.lineWidth = dispRad / 25;
+        ctx.strokeStyle = '#606060';
+        i = 0;
+        while (i < this.kids.length) {
+          k = this.kids[i];
+          ctx.beginPath();
+          ctx.moveTo(dispX, dispY);
+          kdX = vp.cx + k.x * vp.unit;
+          kdY = vp.cy + k.y * vp.unit;
+          ctx.lineTo(kdX, kdY);
+          ctx.stroke();
+          i++;
+        }
+      }
       // Outline
       ctx.beginPath();
       ctx.arc(dispX, dispY, dispRad, 0, pi2, 0);
@@ -148,7 +174,7 @@
     ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, vp.width, vp.height);
     ctx.save();
-    root.layout(0, 0, 1);
+    root.layout(0, 0, 1, 0);
     root.draw(ctx);
     t = performance.now();
     ctx.font = regular;
@@ -169,6 +195,7 @@
     scale *= 1 + event.deltaY * -0.01;
     scale = Math.max(.01, Math.min(4, scale));
     vp.scale = scale;
+    vp.update();
     return raid = window.requestAnimationFrame(draw);
   };
 

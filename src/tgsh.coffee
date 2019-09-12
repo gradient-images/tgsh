@@ -5,9 +5,18 @@ graph = '{
     "kids": [{
       "name": "Sc_1"
     }, {
-      "name": "Sc_2"
+      "name": "Sc_2",
+      "kids": [{
+        "name": "Comp"
+        }, {
+        "name": "Plate"
+      }]
     }, {
       "name": "Sc_3"
+    }, {
+      "name": "Sc_4"
+    }, {
+      "name": "Sc_5"
     }]
   }, {
     "name": "Grade"
@@ -17,11 +26,13 @@ graph = '{
     "name": "Edit"
   }, {
     "name": "In"
+  }, {
+    "name": "Out"
   }
 ]}
 '
 
-fontHeight = 18
+fontHeight = 14
 fontWidth = fontHeight * .75
 fontFamily = 'Roboto Mono'
 regular = fontHeight + 'px ' + fontFamily
@@ -38,8 +49,8 @@ timer = performance.now()
 canvas = document.getElementById('canvas')
 
 vp =
-  scale: 1
-  separation: 0.9
+  scale: .5
+  separation: 1.1
   update: ->
     w = window.innerWidth
     h = window.innerHeight
@@ -52,6 +63,8 @@ vp =
     @cx = w / 2
     @cy = h / 2
     @min = Math.min(w, h)
+
+    @unit = @min / @separation / 2 * @scale
 
 
 class Node
@@ -79,17 +92,40 @@ class Node
     if @kids
       nKids = @kids.length
       kidRad = Math.sqrt(rad ** 2 / nKids)
-      kidRing = rad + kidRad
-      slice = pi2 / nKids
-      kid.layout(Math.sin(slice * i) * kidRing + x, -Math.cos(slice * i) * kidRing + y, kidRad) for kid, i in @kids
+      kidRing = (rad + kidRad) * vp.separation
+      od = Math.sqrt(x ** 2 + y ** 2)
+      if rad == 1
+        slice = pi2 / nKids
+        start = 0
+      else
+        full = Math.asin(rad / od) * 2
+        slice = full / nKids
+        start = -slice * (nKids / 2 - .5)
+        kidRing = (kidRad * 2 * nKids / vp.separation ) / (full * Math.PI / 2)
+      kid.layout(Math.sin(start + slice * i) * (od + kidRing), -Math.cos(start + slice * i) * (od + kidRing), kidRad) for kid, i in @kids
 
   draw: (ctx) ->
     # Calculate details
-    dispRad = @rad * vp.min * vp.separation / 2 * vp.scale
-    dispX = vp.cx + (@x * vp.min * vp.separation / 2 * vp.scale)
-    dispY = vp.cy + (@y * vp.min * vp.separation / 2 * vp.scale)
+    dispRad = @rad * vp.unit
+    dispX = vp.cx + @x * vp.unit
+    dispY = vp.cy + @y * vp.unit
 
     ctx.save()
+
+    # Draw lines
+    if @kids
+      ctx.lineWidth = dispRad / 25
+      ctx.strokeStyle = '#606060'
+      i = 0
+      while i < @kids.length
+        k = @kids[i]
+        ctx.beginPath()
+        ctx.moveTo(dispX, dispY)
+        kdX = vp.cx + k.x * vp.unit
+        kdY = vp.cy + k.y * vp.unit
+        ctx.lineTo(kdX, kdY)
+        ctx.stroke()
+        i++
 
     # Outline
     ctx.beginPath()
@@ -131,7 +167,7 @@ draw = ->
   ctx.clearRect(0, 0, vp.width, vp.height)
   ctx.save()
 
-  root.layout(0, 0, 1)
+  root.layout(0, 0, 1, 0)
   root.draw(ctx)
 
   t = performance.now()
@@ -151,6 +187,7 @@ wheelInteract = (event) ->
   scale *= 1 + event.deltaY * -0.01
   scale = Math.max(.01, Math.min(4, scale))
   vp.scale = scale
+  vp.update()
   raid = window.requestAnimationFrame(draw)
 
 # Init from here on, just like that. See `graph` at the top.
