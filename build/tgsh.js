@@ -1,7 +1,7 @@
 (function() {
   var Node, bold, canvas, draw, fontFamily, fontHeight, fontWidth, graph, minNameWidth, nameFadeRad, nameFadeWidth, noTypoRad, pi2, raid, regular, resizeInteract, root, timer, vp, wheelInteract;
 
-  graph = '{ "name": "Nyulcsapda", "kids": [{ "name": "VFX", "kids": [{ "name": "Sc_1" }, { "name": "Sc_2", "kids": [{ "name": "Comp" }, { "name": "Plate" }] }, { "name": "Sc_3" }, { "name": "Sc_4" }, { "name": "Sc_5" }] }, { "name": "Grade" }, { "name": "Asset" }, { "name": "Edit" }, { "name": "In" }, { "name": "Out" } ]}';
+  graph = '{ "name": "Nyulcsapda", "kids": [{ "name": "VFX", "kids": [{ "name": "Sc_1" }, { "name": "Sc_2", "kids": [{ "name": "Comp" }, { "name": "Plate" }] }, { "name": "Sc_3" }, { "name": "Sc_4" }, { "name": "Sc_5" }] }, { "name": "Grade" }, { "name": "Asset" }, { "name": "Edit" }, { "name": "Sound" }, { "name": "In" }, { "name": "Out" } ]}';
 
   fontHeight = 14;
 
@@ -32,6 +32,7 @@
   vp = {
     scale: .5,
     separation: 1.1,
+    fat: 1.1,
     update: function() {
       var h, w;
       w = window.innerWidth;
@@ -61,7 +62,7 @@
       this.rad = 1;
       ctx = canvas.getContext('2d');
       ctx.font = bold;
-      nameMeasure = ctx.measureText(obj.name + ' ');
+      nameMeasure = ctx.measureText(' ' + obj.name);
       this.nameWidth = nameMeasure.width;
       if (obj.kids) {
         obj.kids = (function() {
@@ -77,39 +78,51 @@
       }
     }
 
-    layout(x, y, rad) {
-      var full, i, j, kid, kidRad, kidRing, len, nKids, od, ref, results, slice, start;
+    layout(x = 0, y = 0, rad = 1, slice = Math.PI, dir = 0) {
+      var dist, firstKidDir, i, kidDir, kidDist, kidRad, kidSlice, nKids, results, wishRad, wishSlice;
       this.x = x;
       this.y = y;
       this.rad = rad;
+      this.slice = slice;
+      this.dir = dir;
+      dist = Math.sqrt(this.x ** 2 + this.y ** 2);
       if (this.kids) {
         nKids = this.kids.length;
-        kidRad = Math.sqrt(rad ** 2 / nKids);
-        kidRing = (rad + kidRad) * vp.separation;
-        od = Math.sqrt(x ** 2 + y ** 2);
-        if (rad === 1) {
-          slice = pi2 / nKids;
-          start = 0;
+        wishRad = Math.sqrt(this.rad ** 2 / nKids) * vp.fat;
+        kidDist = dist + (this.rad + wishRad) * vp.separation;
+        wishSlice = Math.asin(wishRad / kidDist);
+        kidSlice = this.slice / nKids;
+        if (wishSlice < kidSlice) {
+          kidRad = wishRad;
         } else {
-          full = Math.asin(rad / od) * 2;
-          slice = full / nKids;
-          start = -slice * (nKids / 2 - .5);
-          kidRing = (kidRad * 2 * nKids / vp.separation) / (full * Math.PI / 2);
+          kidRad = Math.sin(kidSlice) * kidDist;
         }
-        ref = this.kids;
+        firstKidDir = this.dir - this.slice + kidSlice;
+        console.log("firstKidDir: " + firstKidDir);
+        i = 0;
         results = [];
-        for (i = j = 0, len = ref.length; j < len; i = ++j) {
-          kid = ref[i];
-          results.push(kid.layout(Math.sin(start + slice * i) * (od + kidRing), -Math.cos(start + slice * i) * (od + kidRing), kidRad));
+        while (i < nKids) {
+          kidDir = firstKidDir + kidSlice * i * 2;
+          console.log("kidDir: " + kidDir);
+          this.kids[i].layout(Math.sin(kidDir) * kidDist, -Math.cos(kidDir) * kidDist, kidRad, kidSlice, kidDir);
+          results.push(i++);
         }
         return results;
       }
     }
 
+    // if rad == 1
+    //   slice = pi2 / nKids
+    //   start = 0
+    // else
+    //   full = Math.asin(rad / od) * 2
+    //   slice = full / nKids
+    //   start = -slice * (nKids / 2 - .5)
+    //   kidDist = (wishRad * 2 * nKids / vp.separation ) / (full * Math.PI / 2)
     draw(ctx) {
       var dispRad, dispX, dispY, i, j, k, kdX, kdY, kid, len, nx, ref, results, typoBase;
       // Calculate details
-      dispRad = this.rad * vp.unit;
+      dispRad = this.rad * vp.unit / vp.separation;
       dispX = vp.cx + this.x * vp.unit;
       dispY = vp.cy + this.y * vp.unit;
       ctx.save();
@@ -130,6 +143,7 @@
         }
       }
       // Outline
+      ctx.fillStyle = '#202020';
       ctx.beginPath();
       ctx.arc(dispX, dispY, dispRad, 0, pi2, 0);
       ctx.fill();
@@ -174,7 +188,7 @@
     ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, vp.width, vp.height);
     ctx.save();
-    root.layout(0, 0, 1, 0);
+    root.layout();
     root.draw(ctx);
     t = performance.now();
     ctx.font = regular;

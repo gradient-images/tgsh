@@ -25,6 +25,8 @@ graph = '{
   }, {
     "name": "Edit"
   }, {
+    "name": "Sound"
+  }, {
     "name": "In"
   }, {
     "name": "Out"
@@ -51,6 +53,7 @@ canvas = document.getElementById('canvas')
 vp =
   scale: .5
   separation: 1.1
+  fat: 1.1
   update: ->
     w = window.innerWidth
     h = window.innerHeight
@@ -79,34 +82,47 @@ class Node
 
     ctx = canvas.getContext('2d')
     ctx.font = bold
-    nameMeasure = ctx.measureText(obj.name + ' ')
+    nameMeasure = ctx.measureText(' ' + obj.name)
     @nameWidth = nameMeasure.width
 
     if obj.kids
       obj.kids = (Object.assign(new Node(kid), kid) for kid in obj.kids)
 
-  layout: (x, y, rad) ->
-    @x = x
-    @y = y
-    @rad = rad
+  layout: (@x=0, @y=0, @rad=1, @slice=Math.PI, @dir = 0) ->
+    dist = Math.sqrt(@x ** 2 + @y ** 2)
     if @kids
       nKids = @kids.length
-      kidRad = Math.sqrt(rad ** 2 / nKids)
-      kidRing = (rad + kidRad) * vp.separation
-      od = Math.sqrt(x ** 2 + y ** 2)
-      if rad == 1
-        slice = pi2 / nKids
-        start = 0
+      wishRad = Math.sqrt(@rad ** 2 / nKids) * vp.fat
+      kidDist = dist + (@rad + wishRad) * vp.separation
+      wishSlice = Math.asin(wishRad / kidDist)
+      kidSlice = @slice / nKids
+
+      if wishSlice < kidSlice
+        kidRad = wishRad
       else
-        full = Math.asin(rad / od) * 2
-        slice = full / nKids
-        start = -slice * (nKids / 2 - .5)
-        kidRing = (kidRad * 2 * nKids / vp.separation ) / (full * Math.PI / 2)
-      kid.layout(Math.sin(start + slice * i) * (od + kidRing), -Math.cos(start + slice * i) * (od + kidRing), kidRad) for kid, i in @kids
+        kidRad = Math.sin(kidSlice) * kidDist
+
+      firstKidDir = @dir - @slice + kidSlice
+      console.log("firstKidDir: " + firstKidDir)
+      i = 0
+      while i < nKids
+        kidDir = firstKidDir + kidSlice * i * 2
+        console.log("kidDir: " + kidDir)
+        @kids[i].layout(Math.sin(kidDir) * kidDist, -Math.cos(kidDir) * kidDist, kidRad, kidSlice, kidDir)
+        i++
+
+      # if rad == 1
+      #   slice = pi2 / nKids
+      #   start = 0
+      # else
+      #   full = Math.asin(rad / od) * 2
+      #   slice = full / nKids
+      #   start = -slice * (nKids / 2 - .5)
+      #   kidDist = (wishRad * 2 * nKids / vp.separation ) / (full * Math.PI / 2)
 
   draw: (ctx) ->
     # Calculate details
-    dispRad = @rad * vp.unit
+    dispRad = @rad * vp.unit / vp.separation
     dispX = vp.cx + @x * vp.unit
     dispY = vp.cy + @y * vp.unit
 
@@ -128,6 +144,7 @@ class Node
         i++
 
     # Outline
+    ctx.fillStyle = '#202020'
     ctx.beginPath()
     ctx.arc(dispX, dispY, dispRad, 0, pi2, 0)
     ctx.fill()
@@ -167,7 +184,7 @@ draw = ->
   ctx.clearRect(0, 0, vp.width, vp.height)
   ctx.save()
 
-  root.layout(0, 0, 1, 0)
+  root.layout()
   root.draw(ctx)
 
   t = performance.now()
