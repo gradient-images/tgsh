@@ -45,15 +45,21 @@ nameFadeWidth = 2 * fontWidth
 nameFadeRad = Math.sqrt((nameFadeWidth / 2) ** 2 + (fontHeight / 2) ** 2)
 pi2 = Math.PI * 2
 
-raid = 0
 timer = performance.now()
 
 canvas = document.getElementById('canvas')
 
 vp =
   scale: .5
+  offx: 2
+  offy: 1
   separation: 1.1
   fat: 1.1
+  panning: false
+  panx: 0
+  pany: 0
+  panstx: 0
+  pansty: 0
   update: ->
     w = window.innerWidth
     h = window.innerHeight
@@ -63,11 +69,11 @@ vp =
 
     @width = w
     @height = h
-    @cx = w / 2
-    @cy = h / 2
     @min = Math.min(w, h)
-
     @unit = @min / @separation / 2 * @scale
+    @cx = w / 2 + @offx * @unit
+    @cy = h / 2 + @offy * @unit
+
 
 
 class Node
@@ -90,6 +96,7 @@ class Node
 
   layout: (@x=0, @y=0, @rad=1, @slice=Math.PI, @dir = 0) ->
     dist = Math.sqrt(@x ** 2 + @y ** 2)
+
     if @kids
       nKids = @kids.length
       wishRad = Math.sqrt(@rad ** 2 / nKids) * vp.fat
@@ -103,22 +110,15 @@ class Node
         kidRad = Math.sin(kidSlice) * kidDist
 
       firstKidDir = @dir - @slice + kidSlice
-      console.log("firstKidDir: " + firstKidDir)
       i = 0
       while i < nKids
         kidDir = firstKidDir + kidSlice * i * 2
-        console.log("kidDir: " + kidDir)
         @kids[i].layout(Math.sin(kidDir) * kidDist, -Math.cos(kidDir) * kidDist, kidRad, kidSlice, kidDir)
         i++
 
-      # if rad == 1
-      #   slice = pi2 / nKids
-      #   start = 0
-      # else
-      #   full = Math.asin(rad / od) * 2
-      #   slice = full / nKids
-      #   start = -slice * (nKids / 2 - .5)
-      #   kidDist = (wishRad * 2 * nKids / vp.separation ) / (full * Math.PI / 2)
+    # Fatsy root
+    if @rad == 1
+      @rad = vp.fat
 
   draw: (ctx) ->
     # Calculate details
@@ -178,7 +178,7 @@ class Node
       kid.draw(ctx) for kid in @kids
 
 
-draw = ->
+drawScreen = ->
   ctx = canvas.getContext('2d')
 
   ctx.clearRect(0, 0, vp.width, vp.height)
@@ -195,17 +195,35 @@ draw = ->
 
   ctx.restore()
 
-resizeInteract = ->
+resizeAct = ->
   vp.update()
-  raid = window.requestAnimationFrame(draw)
+  window.requestAnimationFrame(drawScreen)
 
-wheelInteract = (event) ->
+wheelAct = (event) ->
   scale = vp.scale
   scale *= 1 + event.deltaY * -0.01
   scale = Math.max(.01, Math.min(4, scale))
   vp.scale = scale
   vp.update()
-  raid = window.requestAnimationFrame(draw)
+  window.requestAnimationFrame(drawScreen)
+
+mouseDownAct = (e) ->
+  console.log("Pressed$ " + e.clientX)
+  vp.panx = e.clientX
+  vp.pany = e.clientY
+  vp.panstx = vp.offx
+  vp.pansty = vp.offy
+  vp.panning = true
+
+mouseMoveAct = (e) ->
+  if vp.panning
+    vp.offx = vp.panstx + (e.clientX - vp.panx) / vp.unit
+    vp.offy = vp.pansty + (e.clientY - vp.pany) / vp.unit
+    vp.update()
+    window.requestAnimationFrame(drawScreen)
+
+mouseUpAct = (e) ->
+  vp.panning = false
 
 # Init from here on, just like that. See `graph` at the top.
 
@@ -214,8 +232,12 @@ console.log(root)
 
 if canvas.getContext
   vp.update()
-  window.onresize = resizeInteract
-  window.onwheel = wheelInteract
-  window.requestAnimationFrame(draw)
+  console.log(vp)
+  window.onmousedown = mouseDownAct
+  window.onmouseup = mouseUpAct
+  window.onmousemove = mouseMoveAct
+  window.onresize = resizeAct
+  window.onwheel = wheelAct
+  window.requestAnimationFrame(drawScreen)
 
 # console.log("Finished.")

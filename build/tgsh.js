@@ -1,5 +1,5 @@
 (function() {
-  var Node, bold, canvas, draw, fontFamily, fontHeight, fontWidth, graph, minNameWidth, nameFadeRad, nameFadeWidth, noTypoRad, pi2, raid, regular, resizeInteract, root, timer, vp, wheelInteract;
+  var Node, bold, canvas, drawScreen, fontFamily, fontHeight, fontWidth, graph, minNameWidth, mouseDownAct, mouseMoveAct, mouseUpAct, nameFadeRad, nameFadeWidth, noTypoRad, pi2, regular, resizeAct, root, timer, vp, wheelAct;
 
   graph = '{ "name": "Nyulcsapda", "kids": [{ "name": "VFX", "kids": [{ "name": "Sc_1" }, { "name": "Sc_2", "kids": [{ "name": "Comp" }, { "name": "Plate" }] }, { "name": "Sc_3" }, { "name": "Sc_4" }, { "name": "Sc_5" }] }, { "name": "Grade" }, { "name": "Asset" }, { "name": "Edit" }, { "name": "Sound" }, { "name": "In" }, { "name": "Out" } ]}';
 
@@ -23,16 +23,21 @@
 
   pi2 = Math.PI * 2;
 
-  raid = 0;
-
   timer = performance.now();
 
   canvas = document.getElementById('canvas');
 
   vp = {
     scale: .5,
+    offx: 2,
+    offy: 1,
     separation: 1.1,
     fat: 1.1,
+    panning: false,
+    panx: 0,
+    pany: 0,
+    panstx: 0,
+    pansty: 0,
     update: function() {
       var h, w;
       w = window.innerWidth;
@@ -41,10 +46,10 @@
       canvas.height = h;
       this.width = w;
       this.height = h;
-      this.cx = w / 2;
-      this.cy = h / 2;
       this.min = Math.min(w, h);
-      return this.unit = this.min / this.separation / 2 * this.scale;
+      this.unit = this.min / this.separation / 2 * this.scale;
+      this.cx = w / 2 + this.offx * this.unit;
+      return this.cy = h / 2 + this.offy * this.unit;
     }
   };
 
@@ -79,7 +84,7 @@
     }
 
     layout(x = 0, y = 0, rad = 1, slice = Math.PI, dir = 0) {
-      var dist, firstKidDir, i, kidDir, kidDist, kidRad, kidSlice, nKids, results, wishRad, wishSlice;
+      var dist, firstKidDir, i, kidDir, kidDist, kidRad, kidSlice, nKids, wishRad, wishSlice;
       this.x = x;
       this.y = y;
       this.rad = rad;
@@ -98,27 +103,19 @@
           kidRad = Math.sin(kidSlice) * kidDist;
         }
         firstKidDir = this.dir - this.slice + kidSlice;
-        console.log("firstKidDir: " + firstKidDir);
         i = 0;
-        results = [];
         while (i < nKids) {
           kidDir = firstKidDir + kidSlice * i * 2;
-          console.log("kidDir: " + kidDir);
           this.kids[i].layout(Math.sin(kidDir) * kidDist, -Math.cos(kidDir) * kidDist, kidRad, kidSlice, kidDir);
-          results.push(i++);
+          i++;
         }
-        return results;
+      }
+      // Fatsy root
+      if (this.rad === 1) {
+        return this.rad = vp.fat;
       }
     }
 
-    // if rad == 1
-    //   slice = pi2 / nKids
-    //   start = 0
-    // else
-    //   full = Math.asin(rad / od) * 2
-    //   slice = full / nKids
-    //   start = -slice * (nKids / 2 - .5)
-    //   kidDist = (wishRad * 2 * nKids / vp.separation ) / (full * Math.PI / 2)
     draw(ctx) {
       var dispRad, dispX, dispY, i, j, k, kdX, kdY, kid, len, nx, ref, results, typoBase;
       // Calculate details
@@ -183,7 +180,7 @@
 
   };
 
-  draw = function() {
+  drawScreen = function() {
     var ctx, t;
     ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, vp.width, vp.height);
@@ -198,19 +195,41 @@
     return ctx.restore();
   };
 
-  resizeInteract = function() {
+  resizeAct = function() {
     vp.update();
-    return raid = window.requestAnimationFrame(draw);
+    return window.requestAnimationFrame(drawScreen);
   };
 
-  wheelInteract = function(event) {
+  wheelAct = function(event) {
     var scale;
     scale = vp.scale;
     scale *= 1 + event.deltaY * -0.01;
     scale = Math.max(.01, Math.min(4, scale));
     vp.scale = scale;
     vp.update();
-    return raid = window.requestAnimationFrame(draw);
+    return window.requestAnimationFrame(drawScreen);
+  };
+
+  mouseDownAct = function(e) {
+    console.log("Pressed$ " + e.clientX);
+    vp.panx = e.clientX;
+    vp.pany = e.clientY;
+    vp.panstx = vp.offx;
+    vp.pansty = vp.offy;
+    return vp.panning = true;
+  };
+
+  mouseMoveAct = function(e) {
+    if (vp.panning) {
+      vp.offx = vp.panstx + (e.clientX - vp.panx) / vp.unit;
+      vp.offy = vp.pansty + (e.clientY - vp.pany) / vp.unit;
+      vp.update();
+      return window.requestAnimationFrame(drawScreen);
+    }
+  };
+
+  mouseUpAct = function(e) {
+    return vp.panning = false;
   };
 
   // Init from here on, just like that. See `graph` at the top.
@@ -220,9 +239,13 @@
 
   if (canvas.getContext) {
     vp.update();
-    window.onresize = resizeInteract;
-    window.onwheel = wheelInteract;
-    window.requestAnimationFrame(draw);
+    console.log(vp);
+    window.onmousedown = mouseDownAct;
+    window.onmouseup = mouseUpAct;
+    window.onmousemove = mouseMoveAct;
+    window.onresize = resizeAct;
+    window.onwheel = wheelAct;
+    window.requestAnimationFrame(drawScreen);
   }
 
   // console.log("Finished.")
