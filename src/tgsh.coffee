@@ -16,6 +16,7 @@ canvas = document.getElementById('canvas')
 
 vp =
   scale: .333
+  rot: 0
   offx: 0
   offy: 0
   separation: 1.1
@@ -83,7 +84,7 @@ class Node
       if @rad != 1
         firstKidDir = @dir - @slice + kidSlice
       else
-        firstKidDir = @dir
+        firstKidDir = vp.rot
 
       i = 0
       while i < nKids
@@ -115,7 +116,18 @@ class Node
         kdX = vp.cx + k.x * vp.unit
         kdY = vp.cy + k.y * vp.unit
         ctx.lineTo(kdX, kdY)
-        ctx.stroke()
+        if i == 0
+          lw = ctx.lineWidth
+          ctx.lineWidth = lw * 1.333
+          ctx.strokeStyle = '#303030'
+          ctx.stroke()
+          ctx.lineWidth = lw * .75
+          ctx.strokeStyle = '#909090'
+          ctx.stroke()
+          ctx.lineWidth = lw
+          ctx.strokeStyle = '#606060'
+        else
+          ctx.stroke()
         i++
 
     # Outline
@@ -174,12 +186,15 @@ resizeAct = ->
   vp.update()
   window.requestAnimationFrame(drawScreen)
 
-wheelAct = (event) ->
-  scale = vp.scale
-  scale *= 1 + event.deltaY * -0.01
-  scale = Math.max(.001, Math.min(1000, scale))
-  vp.scale = scale
-  vp.update()
+wheelAct = (e) ->
+  if e.shiftKey
+    vp.rot += e.deltaY / 180 / vp.scale ** .5
+  else
+    scale = vp.scale
+    scale *= 1 + e.deltaY * -0.01
+    scale = Math.max(.001, Math.min(1000, scale))
+    vp.scale = scale
+    vp.update()
   window.requestAnimationFrame(drawScreen)
 
 mouseDownAct = (e) ->
