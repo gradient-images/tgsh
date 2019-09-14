@@ -1,39 +1,4 @@
-graph = '{
-  "name": "Nyulcsapda",
-  "kids": [{
-    "name": "VFX",
-    "kids": [{
-      "name": "Sc_1"
-    }, {
-      "name": "Sc_2",
-      "kids": [{
-        "name": "Comp"
-        }, {
-        "name": "Plate"
-      }]
-    }, {
-      "name": "Sc_3"
-    }, {
-      "name": "Sc_4"
-    }, {
-      "name": "Sc_5"
-    }]
-  }, {
-    "name": "Grade"
-  }, {
-    "name": "Asset"
-  }, {
-    "name": "Edit"
-  }, {
-    "name": "Sound"
-  }, {
-    "name": "In"
-  }, {
-    "name": "Out"
-  }
-]}
-'
-
+# Defaults
 fontHeight = 14
 fontWidth = fontHeight * .75
 fontFamily = 'Roboto Mono'
@@ -50,9 +15,9 @@ timer = performance.now()
 canvas = document.getElementById('canvas')
 
 vp =
-  scale: .5
-  offx: 2
-  offy: 1
+  scale: .333
+  offx: 0
+  offy: 0
   separation: 1.1
   fat: 1.1
   panning: false
@@ -77,29 +42,35 @@ vp =
 
 
 class Node
-  @fromJSON: (nodesJSON) ->
-    obj = JSON.parse(nodesJSON)
-    node = Object.assign(new Node(obj), obj)
-
   constructor: (obj) ->
     @x = 0
     @y = 0
     @rad = 1
+    @name = obj.name
 
     ctx = canvas.getContext('2d')
     ctx.font = bold
     nameMeasure = ctx.measureText(' ' + obj.name)
     @nameWidth = nameMeasure.width
 
-    if obj.kids
-      obj.kids = (Object.assign(new Node(kid), kid) for kid in obj.kids)
+    @files = []
+    @dirs = []
+    if obj.contents
+      for kid, i in obj.contents
+        if kid.type == 'directory'
+          @dirs.push(new Node(kid))
+        else if kid.type == 'file'
+          @files.push(new Node(kid))
 
   layout: (@x=0, @y=0, @rad=1, @slice=Math.PI, @dir = 0) ->
     dist = Math.sqrt(@x ** 2 + @y ** 2)
 
-    if @kids
-      nKids = @kids.length
-      wishRad = Math.sqrt(@rad ** 2 / nKids) * vp.fat
+    if @dirs
+      nKids = @dirs.length
+      if nKids == 1
+        wishRad = @rad / vp.separation
+      else
+        wishRad = Math.sqrt(@rad ** 2 / nKids) * vp.fat
       kidDist = dist + (@rad + wishRad) * vp.separation
       wishSlice = Math.asin(wishRad / kidDist)
       kidSlice = @slice / nKids
@@ -109,16 +80,20 @@ class Node
       else
         kidRad = Math.sin(kidSlice) * kidDist
 
-      firstKidDir = @dir - @slice + kidSlice
+      if @rad != 1
+        firstKidDir = @dir - @slice + kidSlice
+      else
+        firstKidDir = @dir
+
       i = 0
       while i < nKids
         kidDir = firstKidDir + kidSlice * i * 2
-        @kids[i].layout(Math.sin(kidDir) * kidDist, -Math.cos(kidDir) * kidDist, kidRad, kidSlice, kidDir)
+        @dirs[i].layout(Math.sin(kidDir) * kidDist, -Math.cos(kidDir) * kidDist, kidRad, kidSlice, kidDir)
         i++
 
     # Fatsy root
     if @rad == 1
-      @rad = vp.fat
+      @rad = vp.separation
 
   draw: (ctx) ->
     # Calculate details
@@ -129,12 +104,12 @@ class Node
     ctx.save()
 
     # Draw lines
-    if @kids
-      ctx.lineWidth = dispRad / 25
+    if @dirs
+      ctx.lineWidth = dispRad * .15 / @dirs.length ** .5
       ctx.strokeStyle = '#606060'
       i = 0
-      while i < @kids.length
-        k = @kids[i]
+      while i < @dirs.length
+        k = @dirs[i]
         ctx.beginPath()
         ctx.moveTo(dispX, dispY)
         kdX = vp.cx + k.x * vp.unit
@@ -174,8 +149,8 @@ class Node
 
     ctx.restore()
 
-    if @kids
-      kid.draw(ctx) for kid in @kids
+    if @dirs
+      kid.draw(ctx) for kid in @dirs
 
 
 drawScreen = ->
@@ -184,8 +159,8 @@ drawScreen = ->
   ctx.clearRect(0, 0, vp.width, vp.height)
   ctx.save()
 
-  root.layout()
-  root.draw(ctx)
+  vp.root.layout()
+  vp.root.draw(ctx)
 
   t = performance.now()
   ctx.font = regular
@@ -202,7 +177,7 @@ resizeAct = ->
 wheelAct = (event) ->
   scale = vp.scale
   scale *= 1 + event.deltaY * -0.01
-  scale = Math.max(.01, Math.min(4, scale))
+  scale = Math.max(.001, Math.min(1000, scale))
   vp.scale = scale
   vp.update()
   window.requestAnimationFrame(drawScreen)
@@ -225,19 +200,23 @@ mouseMoveAct = (e) ->
 mouseUpAct = (e) ->
   vp.panning = false
 
-# Init from here on, just like that. See `graph` at the top.
+# Init from here on, just like that.
 
-root = Node.fromJSON(graph)
-console.log(root)
+req = new XMLHttpRequest()
+req.open('GET', 'https://gradient-images.github.io/tgsh/tgsh_tree.json')
+req.responseType = 'json'
+req.onload = ->
+  vp.root = new Node(req.response[0])
+  console.log(vp.root)
 
-if canvas.getContext
-  vp.update()
-  console.log(vp)
-  window.onmousedown = mouseDownAct
-  window.onmouseup = mouseUpAct
-  window.onmousemove = mouseMoveAct
-  window.onresize = resizeAct
-  window.onwheel = wheelAct
-  window.requestAnimationFrame(drawScreen)
+  if canvas.getContext
+    vp.update()
+    console.log(vp)
+    window.onmousedown = mouseDownAct
+    window.onmouseup = mouseUpAct
+    window.onmousemove = mouseMoveAct
+    window.onresize = resizeAct
+    window.onwheel = wheelAct
+    window.requestAnimationFrame(drawScreen)
 
-# console.log("Finished.")
+req.send()

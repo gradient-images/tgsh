@@ -6,7 +6,7 @@ module.exports = function(grunt) {
     coffee: {
       build: {
         src: 'src/<%= pkg.name %>.coffee',
-        dest: 'build/<%= pkg.name %>.js'
+        dest: 'docs/<%= pkg.name %>.js'
       }
     },
     watch: {

@@ -1,7 +1,6 @@
 (function() {
-  var Node, bold, canvas, drawScreen, fontFamily, fontHeight, fontWidth, graph, minNameWidth, mouseDownAct, mouseMoveAct, mouseUpAct, nameFadeRad, nameFadeWidth, noTypoRad, pi2, regular, resizeAct, root, timer, vp, wheelAct;
-
-  graph = '{ "name": "Nyulcsapda", "kids": [{ "name": "VFX", "kids": [{ "name": "Sc_1" }, { "name": "Sc_2", "kids": [{ "name": "Comp" }, { "name": "Plate" }] }, { "name": "Sc_3" }, { "name": "Sc_4" }, { "name": "Sc_5" }] }, { "name": "Grade" }, { "name": "Asset" }, { "name": "Edit" }, { "name": "Sound" }, { "name": "In" }, { "name": "Out" } ]}';
+  // Defaults
+  var Node, bold, canvas, drawScreen, fontFamily, fontHeight, fontWidth, minNameWidth, mouseDownAct, mouseMoveAct, mouseUpAct, nameFadeRad, nameFadeWidth, noTypoRad, pi2, regular, req, resizeAct, timer, vp, wheelAct;
 
   fontHeight = 14;
 
@@ -28,9 +27,9 @@
   canvas = document.getElementById('canvas');
 
   vp = {
-    scale: .5,
-    offx: 2,
-    offy: 1,
+    scale: .333,
+    offx: 0,
+    offy: 0,
     separation: 1.1,
     fat: 1.1,
     panning: false,
@@ -54,32 +53,28 @@
   };
 
   Node = class Node {
-    static fromJSON(nodesJSON) {
-      var node, obj;
-      obj = JSON.parse(nodesJSON);
-      return node = Object.assign(new Node(obj), obj);
-    }
-
     constructor(obj) {
-      var ctx, kid, nameMeasure;
+      var ctx, i, j, kid, len, nameMeasure, ref;
       this.x = 0;
       this.y = 0;
       this.rad = 1;
+      this.name = obj.name;
       ctx = canvas.getContext('2d');
       ctx.font = bold;
       nameMeasure = ctx.measureText(' ' + obj.name);
       this.nameWidth = nameMeasure.width;
-      if (obj.kids) {
-        obj.kids = (function() {
-          var j, len, ref, results;
-          ref = obj.kids;
-          results = [];
-          for (j = 0, len = ref.length; j < len; j++) {
-            kid = ref[j];
-            results.push(Object.assign(new Node(kid), kid));
+      this.files = [];
+      this.dirs = [];
+      if (obj.contents) {
+        ref = obj.contents;
+        for (i = j = 0, len = ref.length; j < len; i = ++j) {
+          kid = ref[i];
+          if (kid.type === 'directory') {
+            this.dirs.push(new Node(kid));
+          } else if (kid.type === 'file') {
+            this.files.push(new Node(kid));
           }
-          return results;
-        })();
+        }
       }
     }
 
@@ -91,9 +86,13 @@
       this.slice = slice;
       this.dir = dir;
       dist = Math.sqrt(this.x ** 2 + this.y ** 2);
-      if (this.kids) {
-        nKids = this.kids.length;
-        wishRad = Math.sqrt(this.rad ** 2 / nKids) * vp.fat;
+      if (this.dirs) {
+        nKids = this.dirs.length;
+        if (nKids === 1) {
+          wishRad = this.rad / vp.separation;
+        } else {
+          wishRad = Math.sqrt(this.rad ** 2 / nKids) * vp.fat;
+        }
         kidDist = dist + (this.rad + wishRad) * vp.separation;
         wishSlice = Math.asin(wishRad / kidDist);
         kidSlice = this.slice / nKids;
@@ -102,17 +101,21 @@
         } else {
           kidRad = Math.sin(kidSlice) * kidDist;
         }
-        firstKidDir = this.dir - this.slice + kidSlice;
+        if (this.rad !== 1) {
+          firstKidDir = this.dir - this.slice + kidSlice;
+        } else {
+          firstKidDir = this.dir;
+        }
         i = 0;
         while (i < nKids) {
           kidDir = firstKidDir + kidSlice * i * 2;
-          this.kids[i].layout(Math.sin(kidDir) * kidDist, -Math.cos(kidDir) * kidDist, kidRad, kidSlice, kidDir);
+          this.dirs[i].layout(Math.sin(kidDir) * kidDist, -Math.cos(kidDir) * kidDist, kidRad, kidSlice, kidDir);
           i++;
         }
       }
       // Fatsy root
       if (this.rad === 1) {
-        return this.rad = vp.fat;
+        return this.rad = vp.separation;
       }
     }
 
@@ -124,12 +127,12 @@
       dispY = vp.cy + this.y * vp.unit;
       ctx.save();
       // Draw lines
-      if (this.kids) {
-        ctx.lineWidth = dispRad / 25;
+      if (this.dirs) {
+        ctx.lineWidth = dispRad * .15 / this.dirs.length ** .5;
         ctx.strokeStyle = '#606060';
         i = 0;
-        while (i < this.kids.length) {
-          k = this.kids[i];
+        while (i < this.dirs.length) {
+          k = this.dirs[i];
           ctx.beginPath();
           ctx.moveTo(dispX, dispY);
           kdX = vp.cx + k.x * vp.unit;
@@ -167,8 +170,8 @@
         ctx.fillText(this.name, nx, dispY);
       }
       ctx.restore();
-      if (this.kids) {
-        ref = this.kids;
+      if (this.dirs) {
+        ref = this.dirs;
         results = [];
         for (j = 0, len = ref.length; j < len; j++) {
           kid = ref[j];
@@ -185,8 +188,8 @@
     ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, vp.width, vp.height);
     ctx.save();
-    root.layout();
-    root.draw(ctx);
+    vp.root.layout();
+    vp.root.draw(ctx);
     t = performance.now();
     ctx.font = regular;
     ctx.textAlign = 'left';
@@ -204,7 +207,7 @@
     var scale;
     scale = vp.scale;
     scale *= 1 + event.deltaY * -0.01;
-    scale = Math.max(.01, Math.min(4, scale));
+    scale = Math.max(.001, Math.min(1000, scale));
     vp.scale = scale;
     vp.update();
     return window.requestAnimationFrame(drawScreen);
@@ -232,22 +235,28 @@
     return vp.panning = false;
   };
 
-  // Init from here on, just like that. See `graph` at the top.
-  root = Node.fromJSON(graph);
+  // Init from here on, just like that.
+  req = new XMLHttpRequest();
 
-  console.log(root);
+  req.open('GET', 'https://gradient-images.github.io/tgsh/tgsh_tree.json');
 
-  if (canvas.getContext) {
-    vp.update();
-    console.log(vp);
-    window.onmousedown = mouseDownAct;
-    window.onmouseup = mouseUpAct;
-    window.onmousemove = mouseMoveAct;
-    window.onresize = resizeAct;
-    window.onwheel = wheelAct;
-    window.requestAnimationFrame(drawScreen);
-  }
+  req.responseType = 'json';
 
-  // console.log("Finished.")
+  req.onload = function() {
+    vp.root = new Node(req.response[0]);
+    console.log(vp.root);
+    if (canvas.getContext) {
+      vp.update();
+      console.log(vp);
+      window.onmousedown = mouseDownAct;
+      window.onmouseup = mouseUpAct;
+      window.onmousemove = mouseMoveAct;
+      window.onresize = resizeAct;
+      window.onwheel = wheelAct;
+      return window.requestAnimationFrame(drawScreen);
+    }
+  };
+
+  req.send();
 
 }).call(this);
