@@ -1,22 +1,27 @@
+M = Math
+
+{PI, sqrt, sin, cos, asin, acos, atan} = Math
+pi2 = PI * 2
+
 # Defaults
 fontHeight = 14
 fontWidth = fontHeight * .75
 fontFamily = 'Roboto Mono'
+
 regular = fontHeight + 'px ' + fontFamily
 bold = 'bold ' + fontHeight + 'px ' + fontFamily
 minNameWidth = 1 * fontWidth
-noTypoRad = Math.sqrt((minNameWidth / 2) ** 2 + (fontHeight / 2) ** 2)
+noTypoRad = sqrt((minNameWidth / 2) ** 2 + (fontHeight / 2) ** 2)
 nameFadeWidth = 2 * fontWidth
-nameFadeRad = Math.sqrt((nameFadeWidth / 2) ** 2 + (fontHeight / 2) ** 2)
-pi2 = Math.PI * 2
+nameFadeRad = sqrt((nameFadeWidth / 2) ** 2 + (fontHeight / 2) ** 2)
+
 
 timer = performance.now()
-
 canvas = document.getElementById('canvas')
 
 vp =
   scale: .333
-  rot: 0
+  rot: -PI / 2
   offx: 0
   offy: 0
   separation: 1.1
@@ -26,6 +31,7 @@ vp =
   pany: 0
   panstx: 0
   pansty: 0
+  minDispRad: 0.02
   update: ->
     w = window.innerWidth
     h = window.innerHeight
@@ -47,6 +53,7 @@ class Node
     @x = 0
     @y = 0
     @rad = 1
+    @hideDirs = false
     @name = obj.name
 
     ctx = canvas.getContext('2d')
@@ -63,34 +70,40 @@ class Node
         else if kid.type == 'file'
           @files.push(new Node(kid))
 
-  layout: (@x=0, @y=0, @rad=1, @slice=Math.PI, @dir = 0) ->
+  layout: (@x=0, @y=0, @rad=1, @slice=PI, @dir = 0) ->
     dist = Math.sqrt(@x ** 2 + @y ** 2)
 
     if @dirs
       nKids = @dirs.length
+
       if nKids == 1
         wishRad = @rad / vp.separation
       else
-        wishRad = Math.sqrt(@rad ** 2 / nKids) * vp.fat
-      kidDist = dist + (@rad + wishRad) * vp.separation
-      wishSlice = Math.asin(wishRad / kidDist)
-      kidSlice = @slice / nKids
+        wishRad = M.sqrt(@rad ** 2 / nKids) * vp.fat
 
-      if wishSlice < kidSlice
-        kidRad = wishRad
+      if wishRad * vp.scale < vp.minDispRad
+        @hideDirs = true
       else
-        kidRad = Math.sin(kidSlice) * kidDist
+        @hideDirs = false
+        kidDist = dist + (@rad + wishRad) * vp.separation
+        wishSlice = M.asin(wishRad / kidDist)
+        kidSlice = @slice / nKids
 
-      if @rad != 1
-        firstKidDir = @dir - @slice + kidSlice
-      else
-        firstKidDir = vp.rot
+        if wishSlice < kidSlice
+          kidRad = wishRad
+        else
+          kidRad = M.sin(kidSlice) * kidDist
 
-      i = 0
-      while i < nKids
-        kidDir = firstKidDir + kidSlice * i * 2
-        @dirs[i].layout(Math.sin(kidDir) * kidDist, -Math.cos(kidDir) * kidDist, kidRad, kidSlice, kidDir)
-        i++
+        if @rad != 1
+          firstKidDir = @dir - @slice + kidSlice
+        else
+          firstKidDir = vp.rot
+
+        i = 0
+        while i < nKids
+          kidDir = firstKidDir + kidSlice * i * 2
+          @dirs[i].layout(Math.cos(kidDir) * kidDist, Math.sin(kidDir) * kidDist, kidRad, kidSlice, kidDir)
+          i++
 
     # Fatsy root
     if @rad == 1
@@ -106,34 +119,48 @@ class Node
 
     # Draw lines
     if @dirs
-      ctx.lineWidth = dispRad * .15 / @dirs.length ** .5
-      ctx.strokeStyle = '#606060'
-      i = 0
-      while i < @dirs.length
-        k = @dirs[i]
+      if @hideDirs
+        # flagRad = @rad * vp.separation ** 4
+        flagRad = @rad * 1.5
+        flagSlice = (PI / 2 + asin(@rad / vp.separation / sqrt(@x ** 2 + @y ** 2)) - acos(@rad / vp.separation / flagRad)) / vp.separation
+        flagStartX = flagRad * cos(@dir - flagSlice) + @x
+        flagStartY = flagRad * sin(@dir - flagSlice) + @y
+        # console.log(flagRad, @slice, flagSlice, flagStartX, flagStartY)
         ctx.beginPath()
         ctx.moveTo(dispX, dispY)
-        kdX = vp.cx + k.x * vp.unit
-        kdY = vp.cy + k.y * vp.unit
-        ctx.lineTo(kdX, kdY)
-        if i == 0
-          lw = ctx.lineWidth
-          ctx.lineWidth = lw * 1.333
-          ctx.strokeStyle = '#303030'
-          ctx.stroke()
-          ctx.lineWidth = lw * .75
-          ctx.strokeStyle = '#909090'
-          ctx.stroke()
-          ctx.lineWidth = lw
-          ctx.strokeStyle = '#606060'
-        else
-          ctx.stroke()
-        i++
+        ctx.lineTo(vp.cx + flagStartX * vp.unit, vp.cy + flagStartY * vp.unit)
+        ctx.arc(dispX, dispY, flagRad * vp.unit, @dir - flagSlice, @dir + flagSlice)
+        ctx.fillStyle = '#808080'
+        ctx.fill()
+      else
+        ctx.lineWidth = dispRad * .15 / @dirs.length ** .5
+        ctx.strokeStyle = '#606060'
+        i = 0
+        while i < @dirs.length
+          k = @dirs[i]
+          ctx.beginPath()
+          ctx.moveTo(dispX, dispY)
+          kdX = vp.cx + k.x * vp.unit
+          kdY = vp.cy + k.y * vp.unit
+          ctx.lineTo(kdX, kdY)
+          if i == 0
+            lw = ctx.lineWidth
+            ctx.lineWidth = lw * 1.333
+            ctx.strokeStyle = '#303030'
+            ctx.stroke()
+            ctx.lineWidth = lw * .75
+            ctx.strokeStyle = '#909090'
+            ctx.stroke()
+            ctx.lineWidth = lw
+            ctx.strokeStyle = '#606060'
+          else
+            ctx.stroke()
+          i++
 
-    # Outline
+    # Body
     ctx.fillStyle = '#202020'
     ctx.beginPath()
-    ctx.arc(dispX, dispY, dispRad, 0, pi2, 0)
+    ctx.arc(dispX, dispY, dispRad, 0, pi2)
     ctx.fill()
     ctx.clip()
 
@@ -161,7 +188,7 @@ class Node
 
     ctx.restore()
 
-    if @dirs
+    if @dirs and not @hideDirs
       kid.draw(ctx) for kid in @dirs
 
 

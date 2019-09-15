@@ -1,7 +1,13 @@
 (function() {
-  // Defaults
-  var Node, bold, canvas, drawScreen, fontFamily, fontHeight, fontWidth, minNameWidth, mouseDownAct, mouseMoveAct, mouseUpAct, nameFadeRad, nameFadeWidth, noTypoRad, pi2, regular, req, resizeAct, timer, vp, wheelAct;
+  var M, Node, PI, acos, asin, atan, bold, canvas, cos, drawScreen, fontFamily, fontHeight, fontWidth, minNameWidth, mouseDownAct, mouseMoveAct, mouseUpAct, nameFadeRad, nameFadeWidth, noTypoRad, pi2, regular, req, resizeAct, sin, sqrt, timer, vp, wheelAct;
 
+  M = Math;
+
+  ({PI, sqrt, sin, cos, asin, acos, atan} = Math);
+
+  pi2 = PI * 2;
+
+  // Defaults
   fontHeight = 14;
 
   fontWidth = fontHeight * .75;
@@ -14,13 +20,11 @@
 
   minNameWidth = 1 * fontWidth;
 
-  noTypoRad = Math.sqrt((minNameWidth / 2) ** 2 + (fontHeight / 2) ** 2);
+  noTypoRad = sqrt((minNameWidth / 2) ** 2 + (fontHeight / 2) ** 2);
 
   nameFadeWidth = 2 * fontWidth;
 
-  nameFadeRad = Math.sqrt((nameFadeWidth / 2) ** 2 + (fontHeight / 2) ** 2);
-
-  pi2 = Math.PI * 2;
+  nameFadeRad = sqrt((nameFadeWidth / 2) ** 2 + (fontHeight / 2) ** 2);
 
   timer = performance.now();
 
@@ -28,7 +32,7 @@
 
   vp = {
     scale: .333,
-    rot: 0,
+    rot: -PI / 2,
     offx: 0,
     offy: 0,
     separation: 1.1,
@@ -38,6 +42,7 @@
     pany: 0,
     panstx: 0,
     pansty: 0,
+    minDispRad: 0.02,
     update: function() {
       var h, w;
       w = window.innerWidth;
@@ -59,6 +64,7 @@
       this.x = 0;
       this.y = 0;
       this.rad = 1;
+      this.hideDirs = false;
       this.name = obj.name;
       ctx = canvas.getContext('2d');
       ctx.font = bold;
@@ -79,7 +85,7 @@
       }
     }
 
-    layout(x = 0, y = 0, rad = 1, slice = Math.PI, dir = 0) {
+    layout(x = 0, y = 0, rad = 1, slice = PI, dir = 0) {
       var dist, firstKidDir, i, kidDir, kidDist, kidRad, kidSlice, nKids, wishRad, wishSlice;
       this.x = x;
       this.y = y;
@@ -92,26 +98,31 @@
         if (nKids === 1) {
           wishRad = this.rad / vp.separation;
         } else {
-          wishRad = Math.sqrt(this.rad ** 2 / nKids) * vp.fat;
+          wishRad = M.sqrt(this.rad ** 2 / nKids) * vp.fat;
         }
-        kidDist = dist + (this.rad + wishRad) * vp.separation;
-        wishSlice = Math.asin(wishRad / kidDist);
-        kidSlice = this.slice / nKids;
-        if (wishSlice < kidSlice) {
-          kidRad = wishRad;
+        if (wishRad * vp.scale < vp.minDispRad) {
+          this.hideDirs = true;
         } else {
-          kidRad = Math.sin(kidSlice) * kidDist;
-        }
-        if (this.rad !== 1) {
-          firstKidDir = this.dir - this.slice + kidSlice;
-        } else {
-          firstKidDir = vp.rot;
-        }
-        i = 0;
-        while (i < nKids) {
-          kidDir = firstKidDir + kidSlice * i * 2;
-          this.dirs[i].layout(Math.sin(kidDir) * kidDist, -Math.cos(kidDir) * kidDist, kidRad, kidSlice, kidDir);
-          i++;
+          this.hideDirs = false;
+          kidDist = dist + (this.rad + wishRad) * vp.separation;
+          wishSlice = M.asin(wishRad / kidDist);
+          kidSlice = this.slice / nKids;
+          if (wishSlice < kidSlice) {
+            kidRad = wishRad;
+          } else {
+            kidRad = M.sin(kidSlice) * kidDist;
+          }
+          if (this.rad !== 1) {
+            firstKidDir = this.dir - this.slice + kidSlice;
+          } else {
+            firstKidDir = vp.rot;
+          }
+          i = 0;
+          while (i < nKids) {
+            kidDir = firstKidDir + kidSlice * i * 2;
+            this.dirs[i].layout(Math.cos(kidDir) * kidDist, Math.sin(kidDir) * kidDist, kidRad, kidSlice, kidDir);
+            i++;
+          }
         }
       }
       // Fatsy root
@@ -121,7 +132,7 @@
     }
 
     draw(ctx) {
-      var dispRad, dispX, dispY, i, j, k, kdX, kdY, kid, len, lw, nx, ref, results, typoBase;
+      var dispRad, dispX, dispY, flagRad, flagSlice, flagStartX, flagStartY, i, j, k, kdX, kdY, kid, len, lw, nx, ref, results, typoBase;
       // Calculate details
       dispRad = this.rad * vp.unit / vp.separation;
       dispX = vp.cx + this.x * vp.unit;
@@ -129,36 +140,51 @@
       ctx.save();
       // Draw lines
       if (this.dirs) {
-        ctx.lineWidth = dispRad * .15 / this.dirs.length ** .5;
-        ctx.strokeStyle = '#606060';
-        i = 0;
-        while (i < this.dirs.length) {
-          k = this.dirs[i];
+        if (this.hideDirs) {
+          // flagRad = @rad * vp.separation ** 4
+          flagRad = this.rad * 1.5;
+          flagSlice = (PI / 2 + asin(this.rad / vp.separation / sqrt(this.x ** 2 + this.y ** 2)) - acos(this.rad / vp.separation / flagRad)) / vp.separation;
+          flagStartX = flagRad * cos(this.dir - flagSlice) + this.x;
+          flagStartY = flagRad * sin(this.dir - flagSlice) + this.y;
+          // console.log(flagRad, @slice, flagSlice, flagStartX, flagStartY)
           ctx.beginPath();
           ctx.moveTo(dispX, dispY);
-          kdX = vp.cx + k.x * vp.unit;
-          kdY = vp.cy + k.y * vp.unit;
-          ctx.lineTo(kdX, kdY);
-          if (i === 0) {
-            lw = ctx.lineWidth;
-            ctx.lineWidth = lw * 1.333;
-            ctx.strokeStyle = '#303030';
-            ctx.stroke();
-            ctx.lineWidth = lw * .75;
-            ctx.strokeStyle = '#909090';
-            ctx.stroke();
-            ctx.lineWidth = lw;
-            ctx.strokeStyle = '#606060';
-          } else {
-            ctx.stroke();
+          ctx.lineTo(vp.cx + flagStartX * vp.unit, vp.cy + flagStartY * vp.unit);
+          ctx.arc(dispX, dispY, flagRad * vp.unit, this.dir - flagSlice, this.dir + flagSlice);
+          ctx.fillStyle = '#808080';
+          ctx.fill();
+        } else {
+          ctx.lineWidth = dispRad * .15 / this.dirs.length ** .5;
+          ctx.strokeStyle = '#606060';
+          i = 0;
+          while (i < this.dirs.length) {
+            k = this.dirs[i];
+            ctx.beginPath();
+            ctx.moveTo(dispX, dispY);
+            kdX = vp.cx + k.x * vp.unit;
+            kdY = vp.cy + k.y * vp.unit;
+            ctx.lineTo(kdX, kdY);
+            if (i === 0) {
+              lw = ctx.lineWidth;
+              ctx.lineWidth = lw * 1.333;
+              ctx.strokeStyle = '#303030';
+              ctx.stroke();
+              ctx.lineWidth = lw * .75;
+              ctx.strokeStyle = '#909090';
+              ctx.stroke();
+              ctx.lineWidth = lw;
+              ctx.strokeStyle = '#606060';
+            } else {
+              ctx.stroke();
+            }
+            i++;
           }
-          i++;
         }
       }
-      // Outline
+      // Body
       ctx.fillStyle = '#202020';
       ctx.beginPath();
-      ctx.arc(dispX, dispY, dispRad, 0, pi2, 0);
+      ctx.arc(dispX, dispY, dispRad, 0, pi2);
       ctx.fill();
       ctx.clip();
       // Name
@@ -183,7 +209,7 @@
         ctx.fillText(this.name, nx, dispY);
       }
       ctx.restore();
-      if (this.dirs) {
+      if (this.dirs && !this.hideDirs) {
         ref = this.dirs;
         results = [];
         for (j = 0, len = ref.length; j < len; j++) {
