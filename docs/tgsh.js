@@ -142,7 +142,7 @@
       if (this.dirs) {
         if (this.hideDirs) {
           // flagRad = @rad * vp.separation ** 4
-          flagRad = this.rad * 1.5;
+          flagRad = this.rad * (1 + .0333 / (vp.scale * this.rad));
           flagSlice = (PI / 2 + asin(this.rad / vp.separation / sqrt(this.x ** 2 + this.y ** 2)) - acos(this.rad / vp.separation / flagRad)) / vp.separation;
           flagStartX = flagRad * cos(this.dir - flagSlice) + this.x;
           flagStartY = flagRad * sin(this.dir - flagSlice) + this.y;
@@ -151,7 +151,7 @@
           ctx.moveTo(dispX, dispY);
           ctx.lineTo(vp.cx + flagStartX * vp.unit, vp.cy + flagStartY * vp.unit);
           ctx.arc(dispX, dispY, flagRad * vp.unit, this.dir - flagSlice, this.dir + flagSlice);
-          ctx.fillStyle = '#808080';
+          ctx.fillStyle = '#a0a0a0';
           ctx.fill();
         } else {
           ctx.lineWidth = dispRad * .15 / this.dirs.length ** .5;

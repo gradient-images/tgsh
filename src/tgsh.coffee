@@ -121,7 +121,7 @@ class Node
     if @dirs
       if @hideDirs
         # flagRad = @rad * vp.separation ** 4
-        flagRad = @rad * 1.5
+        flagRad = @rad * (1 + .0333 / (vp.scale * @rad))
         flagSlice = (PI / 2 + asin(@rad / vp.separation / sqrt(@x ** 2 + @y ** 2)) - acos(@rad / vp.separation / flagRad)) / vp.separation
         flagStartX = flagRad * cos(@dir - flagSlice) + @x
         flagStartY = flagRad * sin(@dir - flagSlice) + @y
@@ -130,7 +130,7 @@ class Node
         ctx.moveTo(dispX, dispY)
         ctx.lineTo(vp.cx + flagStartX * vp.unit, vp.cy + flagStartY * vp.unit)
         ctx.arc(dispX, dispY, flagRad * vp.unit, @dir - flagSlice, @dir + flagSlice)
-        ctx.fillStyle = '#808080'
+        ctx.fillStyle = '#a0a0a0'
         ctx.fill()
       else
         ctx.lineWidth = dispRad * .15 / @dirs.length ** .5
