@@ -1,9 +1,7 @@
 (function() {
-  var M, Node, PI, acos, asin, atan, bold, canvas, cos, drawScreen, fontFamily, fontHeight, fontWidth, minNameWidth, mouseDownAct, mouseMoveAct, mouseUpAct, nameFadeRad, nameFadeWidth, noTypoRad, pi2, regular, req, resizeAct, sin, sqrt, timer, vp, wheelAct;
+  var Node, PI, acos, asin, atan, bold, canvas, cos, drawScreen, fontFamily, fontHeight, fontWidth, max, min, minNameWidth, mouseDownAct, mouseMoveAct, mouseUpAct, nameFadeRad, nameFadeWidth, noTypoRad, pi2, regular, req, resizeAct, round, sin, sqrt, timer, vp, wheelAct;
 
-  M = Math;
-
-  ({PI, sqrt, sin, cos, asin, acos, atan} = Math);
+  ({PI, sqrt, sin, cos, asin, acos, atan, min, max, round} = Math);
 
   pi2 = PI * 2;
 
@@ -51,7 +49,7 @@
       canvas.height = h;
       this.width = w;
       this.height = h;
-      this.min = Math.min(w, h);
+      this.min = min(w, h);
       this.unit = this.min / this.separation / 2 * this.scale;
       this.cx = w / 2 + this.offx * this.unit;
       return this.cy = h / 2 + this.offy * this.unit;
@@ -85,43 +83,43 @@
       }
     }
 
-    layout(x = 0, y = 0, rad = 1, slice = PI, dir = 0) {
-      var dist, firstKidDir, i, kidDir, kidDist, kidRad, kidSlice, nKids, wishRad, wishSlice;
+    layout(x = 0, y = 0, rad = 1, slice = PI, dir1 = 0) {
+      var dir, dirDist, dirRad, dirSlice, dist, firstDirDir, i, j, kidDir, len, nDirs, ref, wishRad, wishSlice;
       this.x = x;
       this.y = y;
       this.rad = rad;
       this.slice = slice;
-      this.dir = dir;
-      dist = Math.sqrt(this.x ** 2 + this.y ** 2);
+      this.dir = dir1;
+      dist = sqrt(this.x ** 2 + this.y ** 2);
       if (this.dirs) {
-        nKids = this.dirs.length;
-        if (nKids === 1) {
+        nDirs = this.dirs.length;
+        if (nDirs === 1) {
           wishRad = this.rad / vp.separation;
         } else {
-          wishRad = M.sqrt(this.rad ** 2 / nKids) * vp.fat;
+          wishRad = sqrt(this.rad ** 2 / nDirs) * vp.fat;
         }
         if (wishRad * vp.scale < vp.minDispRad) {
           this.hideDirs = true;
         } else {
           this.hideDirs = false;
-          kidDist = dist + (this.rad + wishRad) * vp.separation;
-          wishSlice = M.asin(wishRad / kidDist);
-          kidSlice = this.slice / nKids;
-          if (wishSlice < kidSlice) {
-            kidRad = wishRad;
+          dirDist = dist + (this.rad + wishRad) * vp.separation;
+          wishSlice = asin(wishRad / dirDist);
+          dirSlice = this.slice / nDirs;
+          if (wishSlice < dirSlice) {
+            dirRad = wishRad;
           } else {
-            kidRad = M.sin(kidSlice) * kidDist;
+            dirRad = sin(dirSlice) * dirDist;
           }
           if (this.rad !== 1) {
-            firstKidDir = this.dir - this.slice + kidSlice;
+            firstDirDir = this.dir - this.slice + dirSlice;
           } else {
-            firstKidDir = vp.rot;
+            firstDirDir = vp.rot;
           }
-          i = 0;
-          while (i < nKids) {
-            kidDir = firstKidDir + kidSlice * i * 2;
-            this.dirs[i].layout(Math.cos(kidDir) * kidDist, Math.sin(kidDir) * kidDist, kidRad, kidSlice, kidDir);
-            i++;
+          ref = this.dirs;
+          for (i = j = 0, len = ref.length; j < len; i = ++j) {
+            dir = ref[i];
+            kidDir = firstDirDir + dirSlice * i * 2;
+            dir.layout(cos(kidDir) * dirDist, sin(kidDir) * dirDist, dirRad, dirSlice, kidDir);
           }
         }
       }
@@ -132,7 +130,7 @@
     }
 
     draw(ctx) {
-      var dispRad, dispX, dispY, flagRad, flagSlice, flagStartX, flagStartY, i, j, k, kdX, kdY, kid, len, lw, nx, ref, results, typoBase;
+      var d, ddX, ddY, dir, dispRad, dispX, dispY, flagRad, flagSlice, flagStartX, flagStartY, i, j, k, len, len1, lw, nx, ref, ref1, results, typoBase;
       // Calculate details
       dispRad = this.rad * vp.unit / vp.separation;
       dispX = vp.cx + this.x * vp.unit;
@@ -156,14 +154,14 @@
         } else {
           ctx.lineWidth = dispRad * .15 / this.dirs.length ** .5;
           ctx.strokeStyle = '#606060';
-          i = 0;
-          while (i < this.dirs.length) {
-            k = this.dirs[i];
+          ref = this.dirs;
+          for (i = j = 0, len = ref.length; j < len; i = ++j) {
+            d = ref[i];
             ctx.beginPath();
             ctx.moveTo(dispX, dispY);
-            kdX = vp.cx + k.x * vp.unit;
-            kdY = vp.cy + k.y * vp.unit;
-            ctx.lineTo(kdX, kdY);
+            ddX = vp.cx + d.x * vp.unit;
+            ddY = vp.cy + d.y * vp.unit;
+            ctx.lineTo(ddX, ddY);
             if (i === 0) {
               lw = ctx.lineWidth;
               ctx.lineWidth = lw * 1.333;
@@ -177,7 +175,6 @@
             } else {
               ctx.stroke();
             }
-            i++;
           }
         }
       }
@@ -190,7 +187,7 @@
       // Name
       ctx.fillStyle = '#808080';
       if (dispRad > noTypoRad) {
-        typoBase = 2 * Math.sqrt(dispRad ** 2 - (fontHeight / 2) ** 2);
+        typoBase = 2 * sqrt(dispRad ** 2 - (fontHeight / 2) ** 2);
         // Align
         if (typoBase > this.nameWidth) {
           ctx.textAlign = 'center';
@@ -210,11 +207,11 @@
       }
       ctx.restore();
       if (this.dirs && !this.hideDirs) {
-        ref = this.dirs;
+        ref1 = this.dirs;
         results = [];
-        for (j = 0, len = ref.length; j < len; j++) {
-          kid = ref[j];
-          results.push(kid.draw(ctx));
+        for (k = 0, len1 = ref1.length; k < len1; k++) {
+          dir = ref1[k];
+          results.push(dir.draw(ctx));
         }
         return results;
       }
@@ -232,7 +229,7 @@
     t = performance.now();
     ctx.font = regular;
     ctx.textAlign = 'left';
-    ctx.fillText(Math.round(1000 / (t - timer)) + " FPS", 50, 50);
+    ctx.fillText(round(1000 / (t - timer)) + " FPS", 50, 50);
     timer = t;
     return ctx.restore();
   };
@@ -249,7 +246,7 @@
     } else {
       scale = vp.scale;
       scale *= 1 + e.deltaY * -0.01;
-      scale = Math.max(.001, Math.min(1000, scale));
+      scale = max(.001, Math.min(1000, scale));
       vp.scale = scale;
       vp.update();
     }

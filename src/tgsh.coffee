@@ -1,6 +1,4 @@
-M = Math
-
-{PI, sqrt, sin, cos, asin, acos, atan} = Math
+{PI, sqrt, sin, cos, asin, acos, atan, min, max, round} = Math
 pi2 = PI * 2
 
 # Defaults
@@ -41,7 +39,7 @@ vp =
 
     @width = w
     @height = h
-    @min = Math.min(w, h)
+    @min = min(w, h)
     @unit = @min / @separation / 2 * @scale
     @cx = w / 2 + @offx * @unit
     @cy = h / 2 + @offy * @unit
@@ -71,39 +69,39 @@ class Node
           @files.push(new Node(kid))
 
   layout: (@x=0, @y=0, @rad=1, @slice=PI, @dir = 0) ->
-    dist = Math.sqrt(@x ** 2 + @y ** 2)
+    dist = sqrt(@x ** 2 + @y ** 2)
 
     if @dirs
-      nKids = @dirs.length
+      nDirs = @dirs.length
 
-      if nKids == 1
+      if nDirs == 1
         wishRad = @rad / vp.separation
       else
-        wishRad = M.sqrt(@rad ** 2 / nKids) * vp.fat
+        wishRad = sqrt(@rad ** 2 / nDirs) * vp.fat
 
       if wishRad * vp.scale < vp.minDispRad
         @hideDirs = true
       else
         @hideDirs = false
-        kidDist = dist + (@rad + wishRad) * vp.separation
-        wishSlice = M.asin(wishRad / kidDist)
-        kidSlice = @slice / nKids
+        dirDist = dist + (@rad + wishRad) * vp.separation
+        wishSlice = asin(wishRad / dirDist)
+        dirSlice = @slice / nDirs
 
-        if wishSlice < kidSlice
-          kidRad = wishRad
+        if wishSlice < dirSlice
+          dirRad = wishRad
         else
-          kidRad = M.sin(kidSlice) * kidDist
+          dirRad = sin(dirSlice) * dirDist
 
         if @rad != 1
-          firstKidDir = @dir - @slice + kidSlice
+          firstDirDir = @dir - @slice + dirSlice
         else
-          firstKidDir = vp.rot
+          firstDirDir = vp.rot
 
-        i = 0
-        while i < nKids
-          kidDir = firstKidDir + kidSlice * i * 2
-          @dirs[i].layout(Math.cos(kidDir) * kidDist, Math.sin(kidDir) * kidDist, kidRad, kidSlice, kidDir)
-          i++
+        for dir, i in @dirs
+          kidDir = firstDirDir + dirSlice * i * 2
+          dir.layout(cos(kidDir) * dirDist, \
+                     sin(kidDir) * dirDist, \
+                     dirRad, dirSlice, kidDir)
 
     # Fatsy root
     if @rad == 1
@@ -122,7 +120,8 @@ class Node
       if @hideDirs
         # flagRad = @rad * vp.separation ** 4
         flagRad = @rad * (1 + .0333 / (vp.scale * @rad))
-        flagSlice = (PI / 2 + asin(@rad / vp.separation / sqrt(@x ** 2 + @y ** 2)) - acos(@rad / vp.separation / flagRad)) / vp.separation
+        flagSlice = (PI / 2 + asin(@rad / vp.separation / sqrt(@x ** 2 + @y ** 2)) \
+            - acos(@rad / vp.separation / flagRad)) / vp.separation
         flagStartX = flagRad * cos(@dir - flagSlice) + @x
         flagStartY = flagRad * sin(@dir - flagSlice) + @y
         # console.log(flagRad, @slice, flagSlice, flagStartX, flagStartY)
@@ -135,14 +134,12 @@ class Node
       else
         ctx.lineWidth = dispRad * .15 / @dirs.length ** .5
         ctx.strokeStyle = '#606060'
-        i = 0
-        while i < @dirs.length
-          k = @dirs[i]
+        for d, i in @dirs
           ctx.beginPath()
           ctx.moveTo(dispX, dispY)
-          kdX = vp.cx + k.x * vp.unit
-          kdY = vp.cy + k.y * vp.unit
-          ctx.lineTo(kdX, kdY)
+          ddX = vp.cx + d.x * vp.unit
+          ddY = vp.cy + d.y * vp.unit
+          ctx.lineTo(ddX, ddY)
           if i == 0
             lw = ctx.lineWidth
             ctx.lineWidth = lw * 1.333
@@ -155,7 +152,6 @@ class Node
             ctx.strokeStyle = '#606060'
           else
             ctx.stroke()
-          i++
 
     # Body
     ctx.fillStyle = '#202020'
@@ -167,7 +163,7 @@ class Node
     # Name
     ctx.fillStyle = '#808080'
     if dispRad > noTypoRad
-      typoBase = 2 * Math.sqrt(dispRad ** 2 - (fontHeight / 2) ** 2)
+      typoBase = 2 * sqrt(dispRad ** 2 - (fontHeight / 2) ** 2)
 
       # Align
       if typoBase > @nameWidth
@@ -189,7 +185,7 @@ class Node
     ctx.restore()
 
     if @dirs and not @hideDirs
-      kid.draw(ctx) for kid in @dirs
+      dir.draw(ctx) for dir in @dirs
 
 
 drawScreen = ->
@@ -204,7 +200,7 @@ drawScreen = ->
   t = performance.now()
   ctx.font = regular
   ctx.textAlign = 'left'
-  ctx.fillText(Math.round(1000 / (t - timer)) + " FPS", 50, 50)
+  ctx.fillText(round(1000 / (t - timer)) + " FPS", 50, 50)
   timer = t
 
   ctx.restore()
@@ -219,7 +215,7 @@ wheelAct = (e) ->
   else
     scale = vp.scale
     scale *= 1 + e.deltaY * -0.01
-    scale = Math.max(.001, Math.min(1000, scale))
+    scale = max(.001, Math.min(1000, scale))
     vp.scale = scale
     vp.update()
   window.requestAnimationFrame(drawScreen)
