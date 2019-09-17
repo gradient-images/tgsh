@@ -42,7 +42,7 @@
     pany: 0,
     panstx: 0,
     pansty: 0,
-    minDispRad: 0.02,
+    minDispRad: 0.01,
     update: function() {
       var h, w;
       w = window.innerWidth;
@@ -132,7 +132,7 @@
     }
 
     draw(ctx) {
-      var area, d, ddX, ddY, dir, dispRad, dispX, dispY, f, fDir, fX, fY, fileDispRad, fileDist, flagRad, flagSlice, flagStartX, flagStartY, i, inRad, j, k, l, len, len1, len2, lw, nFiles, nx, r, ref, ref1, ref2, results, slice, typoBase, wishRad;
+      var area, d, ddX, ddY, dir, dispRad, dispX, dispY, f, fDir, fX, fY, fileDispRad, fileDist, flagRad, flagSlice, flagStartX, flagStartY, i, inRad, j, k, l, len, len1, len2, lw, nFiles, nx, ref, ref1, ref2, results, sepRad, slice, typoBase, wishRad;
       // Calculate details
       dispRad = this.rad * vp.unit / vp.sep;
       dispX = vp.cx + this.x * vp.unit;
@@ -186,17 +186,25 @@
       ctx.arc(dispX, dispY, dispRad, 0, pi2);
       ctx.fill();
       ctx.clip();
+      sepRad = this.rad / vp.sep ** .5;
+      ctx.beginPath();
+      ctx.fillStyle = '#404040';
+      ctx.arc(dispX, dispY, sepRad * vp.unit / vp.sep, 0, PI * 2);
+      ctx.fill();
       // Files
       if (this.files.length > 0) {
-        r = this.rad / vp.sep;
-        ctx.fillStyle = '#404040';
+        inRad = sepRad - (sepRad / vp.sep ** 2);
+        ctx.fillStyle = '#202020';
+        ctx.beginPath();
+        ctx.arc(dispX, dispY, inRad * vp.unit, 0, pi2);
+        ctx.fill();
+        ctx.fillStyle = '#606060';
         nFiles = this.files.length;
-        inRad = r - (r / vp.sep ** 2);
         slice = PI * 2 / nFiles;
-        area = (r ** 2 - inRad ** 2) * PI;
-        wishRad = min(sqrt(area * areaLoss / nFiles / PI), (r - inRad) / 2);
+        area = (sepRad ** 2 - inRad ** 2) * PI;
+        wishRad = min(sqrt(area * areaLoss / nFiles / PI), (sepRad - inRad) / 2);
         fileDispRad = wishRad / vp.sep * vp.unit;
-        fileDist = inRad + (r - inRad) / 2;
+        fileDist = inRad + (sepRad - inRad) / 2;
         ref1 = this.files;
         // console.log(nFiles, inRad, slice, area, wishRad, fileDist)
         for (i = k = 0, len1 = ref1.length; k < len1; i = ++k) {
@@ -210,7 +218,7 @@
         }
       }
       // Name
-      ctx.fillStyle = '#808080';
+      ctx.fillStyle = '#a0a0a0';
       if (dispRad > noTypoRad) {
         typoBase = 2 * sqrt(dispRad ** 2 - (fontHeight / 2) ** 2);
         // Align

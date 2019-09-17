@@ -30,7 +30,7 @@ vp =
   pany: 0
   panstx: 0
   pansty: 0
-  minDispRad: 0.02
+  minDispRad: 0.01
   update: ->
     w = window.innerWidth
     h = window.innerHeight
@@ -161,17 +161,26 @@ class Node
     ctx.fill()
     ctx.clip()
 
+    sepRad = @rad / vp.sep ** .5
+    ctx.beginPath()
+    ctx.fillStyle = '#404040'
+    ctx.arc(dispX, dispY, sepRad * vp.unit / vp.sep, 0, PI*2)
+    ctx.fill()
+
     # Files
     if @files.length > 0
-      r = @rad / vp.sep
-      ctx.fillStyle = '#404040'
+      inRad = sepRad - (sepRad / vp.sep ** 2)
+      ctx.fillStyle = '#202020'
+      ctx.beginPath()
+      ctx.arc(dispX, dispY, inRad * vp.unit, 0, pi2)
+      ctx.fill()
+      ctx.fillStyle = '#606060'
       nFiles = @files.length
-      inRad = r - (r / vp.sep ** 2)
       slice = PI * 2 / nFiles
-      area = (r ** 2 - inRad ** 2) * PI
-      wishRad = min(sqrt(area * areaLoss / nFiles / PI), (r - inRad) / 2)
+      area = (sepRad ** 2 - inRad ** 2) * PI
+      wishRad = min(sqrt(area * areaLoss / nFiles / PI), (sepRad - inRad) / 2)
       fileDispRad = wishRad / vp.sep * vp.unit
-      fileDist = inRad + (r - inRad) / 2
+      fileDist = inRad + (sepRad - inRad) / 2
       # console.log(nFiles, inRad, slice, area, wishRad, fileDist)
       for f, i in @files
         fDir = i * slice - PI / 2
@@ -182,7 +191,7 @@ class Node
         ctx.fill()
 
     # Name
-    ctx.fillStyle = '#808080'
+    ctx.fillStyle = '#a0a0a0'
     if dispRad > noTypoRad
       typoBase = 2 * sqrt(dispRad ** 2 - (fontHeight / 2) ** 2)
 
