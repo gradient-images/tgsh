@@ -33,7 +33,7 @@
     rot: -PI / 2,
     offx: 0,
     offy: 0,
-    separation: 1.1,
+    sep: 1.1,
     fat: 1.1,
     panning: false,
     panx: 0,
@@ -50,7 +50,7 @@
       this.width = w;
       this.height = h;
       this.min = min(w, h);
-      this.unit = this.min / this.separation / 2 * this.scale;
+      this.unit = this.min / this.sep / 2 * this.scale;
       this.cx = w / 2 + this.offx * this.unit;
       return this.cy = h / 2 + this.offy * this.unit;
     }
@@ -84,7 +84,7 @@
     }
 
     layout(x = 0, y = 0, rad = 1, slice = PI, dir1 = 0) {
-      var dir, dirDist, dirRad, dirSlice, dist, firstDirDir, i, j, kidDir, len, nDirs, ref, wishRad, wishSlice;
+      var dir, dirDist, dirRad, dirSlice, dist, firstDirDir, i, inRad, j, kidDir, len, nDirs, nFiles, ref, wishRad, wishSlice;
       this.x = x;
       this.y = y;
       this.rad = rad;
@@ -94,7 +94,7 @@
       if (this.dirs) {
         nDirs = this.dirs.length;
         if (nDirs === 1) {
-          wishRad = this.rad / vp.separation;
+          wishRad = this.rad / vp.sep;
         } else {
           wishRad = sqrt(this.rad ** 2 / nDirs) * vp.fat;
         }
@@ -102,7 +102,7 @@
           this.hideDirs = true;
         } else {
           this.hideDirs = false;
-          dirDist = dist + (this.rad + wishRad) * vp.separation;
+          dirDist = dist + (this.rad + wishRad) * vp.sep;
           wishSlice = asin(wishRad / dirDist);
           dirSlice = this.slice / nDirs;
           if (wishSlice < dirSlice) {
@@ -123,25 +123,29 @@
           }
         }
       }
+      if (this.files) {
+        nFiles = this.files.length;
+        inRad = this.rad * (1 - vp.sep);
+      }
       // Fatsy root
       if (this.rad === 1) {
-        return this.rad = vp.separation;
+        return this.rad = vp.sep;
       }
     }
 
     draw(ctx) {
       var d, ddX, ddY, dir, dispRad, dispX, dispY, flagRad, flagSlice, flagStartX, flagStartY, i, j, k, len, len1, lw, nx, ref, ref1, results, typoBase;
       // Calculate details
-      dispRad = this.rad * vp.unit / vp.separation;
+      dispRad = this.rad * vp.unit / vp.sep;
       dispX = vp.cx + this.x * vp.unit;
       dispY = vp.cy + this.y * vp.unit;
       ctx.save();
       // Draw lines
       if (this.dirs) {
         if (this.hideDirs) {
-          // flagRad = @rad * vp.separation ** 4
+          // flagRad = @rad * vp.sep ** 4
           flagRad = this.rad * (1 + .0333 / (vp.scale * this.rad));
-          flagSlice = (PI / 2 + asin(this.rad / vp.separation / sqrt(this.x ** 2 + this.y ** 2)) - acos(this.rad / vp.separation / flagRad)) / vp.separation;
+          flagSlice = (PI / 2 + asin(this.rad / vp.sep / sqrt(this.x ** 2 + this.y ** 2)) - acos(this.rad / vp.sep / flagRad)) / vp.sep;
           flagStartX = flagRad * cos(this.dir - flagSlice) + this.x;
           flagStartY = flagRad * sin(this.dir - flagSlice) + this.y;
           // console.log(flagRad, @slice, flagSlice, flagStartX, flagStartY)

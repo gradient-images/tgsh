@@ -22,7 +22,7 @@ vp =
   rot: -PI / 2
   offx: 0
   offy: 0
-  separation: 1.1
+  sep: 1.1
   fat: 1.1
   panning: false
   panx: 0
@@ -40,7 +40,7 @@ vp =
     @width = w
     @height = h
     @min = min(w, h)
-    @unit = @min / @separation / 2 * @scale
+    @unit = @min / @sep / 2 * @scale
     @cx = w / 2 + @offx * @unit
     @cy = h / 2 + @offy * @unit
 
@@ -75,7 +75,7 @@ class Node
       nDirs = @dirs.length
 
       if nDirs == 1
-        wishRad = @rad / vp.separation
+        wishRad = @rad / vp.sep
       else
         wishRad = sqrt(@rad ** 2 / nDirs) * vp.fat
 
@@ -83,7 +83,7 @@ class Node
         @hideDirs = true
       else
         @hideDirs = false
-        dirDist = dist + (@rad + wishRad) * vp.separation
+        dirDist = dist + (@rad + wishRad) * vp.sep
         wishSlice = asin(wishRad / dirDist)
         dirSlice = @slice / nDirs
 
@@ -103,13 +103,17 @@ class Node
                      sin(kidDir) * dirDist, \
                      dirRad, dirSlice, kidDir)
 
+    if @files
+      nFiles = @files.length
+      inRad = @rad * (1 - vp.sep)
+
     # Fatsy root
     if @rad == 1
-      @rad = vp.separation
+      @rad = vp.sep
 
   draw: (ctx) ->
     # Calculate details
-    dispRad = @rad * vp.unit / vp.separation
+    dispRad = @rad * vp.unit / vp.sep
     dispX = vp.cx + @x * vp.unit
     dispY = vp.cy + @y * vp.unit
 
@@ -118,10 +122,10 @@ class Node
     # Draw lines
     if @dirs
       if @hideDirs
-        # flagRad = @rad * vp.separation ** 4
+        # flagRad = @rad * vp.sep ** 4
         flagRad = @rad * (1 + .0333 / (vp.scale * @rad))
-        flagSlice = (PI / 2 + asin(@rad / vp.separation / sqrt(@x ** 2 + @y ** 2)) \
-            - acos(@rad / vp.separation / flagRad)) / vp.separation
+        flagSlice = (PI / 2 + asin(@rad / vp.sep / sqrt(@x ** 2 + @y ** 2)) \
+            - acos(@rad / vp.sep / flagRad)) / vp.sep
         flagStartX = flagRad * cos(@dir - flagSlice) + @x
         flagStartY = flagRad * sin(@dir - flagSlice) + @y
         # console.log(flagRad, @slice, flagSlice, flagStartX, flagStartY)
