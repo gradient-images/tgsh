@@ -1,7 +1,7 @@
 {PI, sqrt, sin, cos, asin, acos, atan, min, max, round} = Math
 pi2 = PI * 2
 
-# Defaults
+# Constants
 fontHeight = 14
 fontWidth = fontHeight * .75
 fontFamily = 'Roboto Mono'
@@ -12,6 +12,7 @@ minNameWidth = 1 * fontWidth
 noTypoRad = sqrt((minNameWidth / 2) ** 2 + (fontHeight / 2) ** 2)
 nameFadeWidth = 2 * fontWidth
 nameFadeRad = sqrt((nameFadeWidth / 2) ** 2 + (fontHeight / 2) ** 2)
+areaLoss = PI / 4 * .5
 
 
 timer = performance.now()
@@ -71,7 +72,7 @@ class Node
   layout: (@x=0, @y=0, @rad=1, @slice=PI, @dir = 0) ->
     dist = sqrt(@x ** 2 + @y ** 2)
 
-    if @dirs
+    if @dirs.length > 0
       nDirs = @dirs.length
 
       if nDirs == 1
@@ -103,10 +104,6 @@ class Node
                      sin(kidDir) * dirDist, \
                      dirRad, dirSlice, kidDir)
 
-    if @files
-      nFiles = @files.length
-      inRad = @rad * (1 - vp.sep)
-
     # Fatsy root
     if @rad == 1
       @rad = vp.sep
@@ -120,7 +117,7 @@ class Node
     ctx.save()
 
     # Draw lines
-    if @dirs
+    if @dirs.length > 0
       if @hideDirs
         # flagRad = @rad * vp.sep ** 4
         flagRad = @rad * (1 + .0333 / (vp.scale * @rad))
@@ -141,8 +138,8 @@ class Node
         for d, i in @dirs
           ctx.beginPath()
           ctx.moveTo(dispX, dispY)
-          ddX = vp.cx + d.x * vp.unit
-          ddY = vp.cy + d.y * vp.unit
+          ddX = d.x * vp.unit + vp.cx
+          ddY = d.y * vp.unit + vp.cy
           ctx.lineTo(ddX, ddY)
           if i == 0
             lw = ctx.lineWidth
@@ -163,6 +160,26 @@ class Node
     ctx.arc(dispX, dispY, dispRad, 0, pi2)
     ctx.fill()
     ctx.clip()
+
+    # Files
+    if @files.length > 0
+      r = @rad / vp.sep
+      ctx.fillStyle = '#404040'
+      nFiles = @files.length
+      inRad = r - (r / vp.sep ** 2)
+      slice = PI * 2 / nFiles
+      area = (r ** 2 - inRad ** 2) * PI
+      wishRad = min(sqrt(area * areaLoss / nFiles / PI), (r - inRad) / 2)
+      fileDispRad = wishRad / vp.sep * vp.unit
+      fileDist = inRad + (r - inRad) / 2
+      # console.log(nFiles, inRad, slice, area, wishRad, fileDist)
+      for f, i in @files
+        fDir = i * slice - PI / 2
+        fX = (@x + cos(fDir) * fileDist) * vp.unit + vp.cx
+        fY = (@y + sin(fDir) * fileDist) * vp.unit + vp.cy
+        ctx.beginPath()
+        ctx.arc(fX, fY, fileDispRad, 0, 2*PI)
+        ctx.fill()
 
     # Name
     ctx.fillStyle = '#808080'
@@ -188,7 +205,8 @@ class Node
 
     ctx.restore()
 
-    if @dirs and not @hideDirs
+    # Draw directories
+    if @dirs.length > 0 and not @hideDirs
       dir.draw(ctx) for dir in @dirs
 
 

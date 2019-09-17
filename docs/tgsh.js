@@ -1,11 +1,11 @@
 (function() {
-  var Node, PI, acos, asin, atan, bold, canvas, cos, drawScreen, fontFamily, fontHeight, fontWidth, max, min, minNameWidth, mouseDownAct, mouseMoveAct, mouseUpAct, nameFadeRad, nameFadeWidth, noTypoRad, pi2, regular, req, resizeAct, round, sin, sqrt, timer, vp, wheelAct;
+  var Node, PI, acos, areaLoss, asin, atan, bold, canvas, cos, drawScreen, fontFamily, fontHeight, fontWidth, max, min, minNameWidth, mouseDownAct, mouseMoveAct, mouseUpAct, nameFadeRad, nameFadeWidth, noTypoRad, pi2, regular, req, resizeAct, round, sin, sqrt, timer, vp, wheelAct;
 
   ({PI, sqrt, sin, cos, asin, acos, atan, min, max, round} = Math);
 
   pi2 = PI * 2;
 
-  // Defaults
+  // Constants
   fontHeight = 14;
 
   fontWidth = fontHeight * .75;
@@ -23,6 +23,8 @@
   nameFadeWidth = 2 * fontWidth;
 
   nameFadeRad = sqrt((nameFadeWidth / 2) ** 2 + (fontHeight / 2) ** 2);
+
+  areaLoss = PI / 4 * .5;
 
   timer = performance.now();
 
@@ -83,15 +85,15 @@
       }
     }
 
-    layout(x = 0, y = 0, rad = 1, slice = PI, dir1 = 0) {
-      var dir, dirDist, dirRad, dirSlice, dist, firstDirDir, i, inRad, j, kidDir, len, nDirs, nFiles, ref, wishRad, wishSlice;
+    layout(x = 0, y = 0, rad = 1, slice1 = PI, dir1 = 0) {
+      var dir, dirDist, dirRad, dirSlice, dist, firstDirDir, i, j, kidDir, len, nDirs, ref, wishRad, wishSlice;
       this.x = x;
       this.y = y;
       this.rad = rad;
-      this.slice = slice;
+      this.slice = slice1;
       this.dir = dir1;
       dist = sqrt(this.x ** 2 + this.y ** 2);
-      if (this.dirs) {
+      if (this.dirs.length > 0) {
         nDirs = this.dirs.length;
         if (nDirs === 1) {
           wishRad = this.rad / vp.sep;
@@ -123,10 +125,6 @@
           }
         }
       }
-      if (this.files) {
-        nFiles = this.files.length;
-        inRad = this.rad * (1 - vp.sep);
-      }
       // Fatsy root
       if (this.rad === 1) {
         return this.rad = vp.sep;
@@ -134,14 +132,14 @@
     }
 
     draw(ctx) {
-      var d, ddX, ddY, dir, dispRad, dispX, dispY, flagRad, flagSlice, flagStartX, flagStartY, i, j, k, len, len1, lw, nx, ref, ref1, results, typoBase;
+      var area, d, ddX, ddY, dir, dispRad, dispX, dispY, f, fDir, fX, fY, fileDispRad, fileDist, flagRad, flagSlice, flagStartX, flagStartY, i, inRad, j, k, l, len, len1, len2, lw, nFiles, nx, r, ref, ref1, ref2, results, slice, typoBase, wishRad;
       // Calculate details
       dispRad = this.rad * vp.unit / vp.sep;
       dispX = vp.cx + this.x * vp.unit;
       dispY = vp.cy + this.y * vp.unit;
       ctx.save();
       // Draw lines
-      if (this.dirs) {
+      if (this.dirs.length > 0) {
         if (this.hideDirs) {
           // flagRad = @rad * vp.sep ** 4
           flagRad = this.rad * (1 + .0333 / (vp.scale * this.rad));
@@ -163,8 +161,8 @@
             d = ref[i];
             ctx.beginPath();
             ctx.moveTo(dispX, dispY);
-            ddX = vp.cx + d.x * vp.unit;
-            ddY = vp.cy + d.y * vp.unit;
+            ddX = d.x * vp.unit + vp.cx;
+            ddY = d.y * vp.unit + vp.cy;
             ctx.lineTo(ddX, ddY);
             if (i === 0) {
               lw = ctx.lineWidth;
@@ -188,6 +186,29 @@
       ctx.arc(dispX, dispY, dispRad, 0, pi2);
       ctx.fill();
       ctx.clip();
+      // Files
+      if (this.files.length > 0) {
+        r = this.rad / vp.sep;
+        ctx.fillStyle = '#404040';
+        nFiles = this.files.length;
+        inRad = r - (r / vp.sep ** 2);
+        slice = PI * 2 / nFiles;
+        area = (r ** 2 - inRad ** 2) * PI;
+        wishRad = min(sqrt(area * areaLoss / nFiles / PI), (r - inRad) / 2);
+        fileDispRad = wishRad / vp.sep * vp.unit;
+        fileDist = inRad + (r - inRad) / 2;
+        ref1 = this.files;
+        // console.log(nFiles, inRad, slice, area, wishRad, fileDist)
+        for (i = k = 0, len1 = ref1.length; k < len1; i = ++k) {
+          f = ref1[i];
+          fDir = i * slice - PI / 2;
+          fX = (this.x + cos(fDir) * fileDist) * vp.unit + vp.cx;
+          fY = (this.y + sin(fDir) * fileDist) * vp.unit + vp.cy;
+          ctx.beginPath();
+          ctx.arc(fX, fY, fileDispRad, 0, 2 * PI);
+          ctx.fill();
+        }
+      }
       // Name
       ctx.fillStyle = '#808080';
       if (dispRad > noTypoRad) {
@@ -210,11 +231,12 @@
         ctx.fillText(this.name, nx, dispY);
       }
       ctx.restore();
-      if (this.dirs && !this.hideDirs) {
-        ref1 = this.dirs;
+      // Draw directories
+      if (this.dirs.length > 0 && !this.hideDirs) {
+        ref2 = this.dirs;
         results = [];
-        for (k = 0, len1 = ref1.length; k < len1; k++) {
-          dir = ref1[k];
+        for (l = 0, len2 = ref2.length; l < len2; l++) {
+          dir = ref2[l];
           results.push(dir.draw(ctx));
         }
         return results;
