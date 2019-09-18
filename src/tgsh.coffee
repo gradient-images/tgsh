@@ -1,5 +1,4 @@
 {PI, sqrt, sin, cos, asin, acos, atan, min, max, round} = Math
-pi2 = PI * 2
 
 # Constants
 fontHeight = 14
@@ -13,7 +12,8 @@ noTypoRad = sqrt((minNameWidth / 2) ** 2 + (fontHeight / 2) ** 2)
 nameFadeWidth = 2 * fontWidth
 nameFadeRad = sqrt((nameFadeWidth / 2) ** 2 + (fontHeight / 2) ** 2)
 areaLoss = PI / 4 * .5
-
+# gr = (1 + 5**.5) / 2
+# ga = PI*2 / gr**2
 
 timer = performance.now()
 canvas = document.getElementById('canvas')
@@ -157,7 +157,7 @@ class Node
     # Body
     ctx.fillStyle = '#202020'
     ctx.beginPath()
-    ctx.arc(dispX, dispY, dispRad, 0, pi2)
+    ctx.arc(dispX, dispY, dispRad, 0, PI*2)
     ctx.fill()
     ctx.clip()
 
@@ -172,7 +172,7 @@ class Node
       inRad = sepRad - (sepRad / vp.sep ** 2)
       ctx.fillStyle = '#202020'
       ctx.beginPath()
-      ctx.arc(dispX, dispY, inRad * vp.unit, 0, pi2)
+      ctx.arc(dispX, dispY, inRad * vp.unit, 0, PI*2)
       ctx.fill()
       ctx.fillStyle = '#606060'
       nFiles = @files.length

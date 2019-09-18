@@ -1,9 +1,7 @@
 (function() {
-  var Node, PI, acos, areaLoss, asin, atan, bold, canvas, cos, drawScreen, fontFamily, fontHeight, fontWidth, max, min, minNameWidth, mouseDownAct, mouseMoveAct, mouseUpAct, nameFadeRad, nameFadeWidth, noTypoRad, pi2, regular, req, resizeAct, round, sin, sqrt, timer, vp, wheelAct;
+  var Node, PI, acos, areaLoss, asin, atan, bold, canvas, cos, drawScreen, fontFamily, fontHeight, fontWidth, max, min, minNameWidth, mouseDownAct, mouseMoveAct, mouseUpAct, nameFadeRad, nameFadeWidth, noTypoRad, regular, req, resizeAct, round, sin, sqrt, timer, vp, wheelAct;
 
   ({PI, sqrt, sin, cos, asin, acos, atan, min, max, round} = Math);
-
-  pi2 = PI * 2;
 
   // Constants
   fontHeight = 14;
@@ -26,6 +24,8 @@
 
   areaLoss = PI / 4 * .5;
 
+  // gr = (1 + 5**.5) / 2
+  // ga = PI*2 / gr**2
   timer = performance.now();
 
   canvas = document.getElementById('canvas');
@@ -183,7 +183,7 @@
       // Body
       ctx.fillStyle = '#202020';
       ctx.beginPath();
-      ctx.arc(dispX, dispY, dispRad, 0, pi2);
+      ctx.arc(dispX, dispY, dispRad, 0, PI * 2);
       ctx.fill();
       ctx.clip();
       sepRad = this.rad / vp.sep ** .5;
@@ -196,7 +196,7 @@
         inRad = sepRad - (sepRad / vp.sep ** 2);
         ctx.fillStyle = '#202020';
         ctx.beginPath();
-        ctx.arc(dispX, dispY, inRad * vp.unit, 0, pi2);
+        ctx.arc(dispX, dispY, inRad * vp.unit, 0, PI * 2);
         ctx.fill();
         ctx.fillStyle = '#606060';
         nFiles = this.files.length;
