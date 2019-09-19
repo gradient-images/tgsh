@@ -1,4 +1,4 @@
-{PI, sqrt, sin, cos, asin, acos, atan, min, max, round} = Math
+{PI, sqrt, sin, cos, asin, acos, atan, min, max, round, ceil} = Math
 
 # Constants
 fontHeight = 14
@@ -155,40 +155,58 @@ class Node
             ctx.stroke()
 
     # Body
-    ctx.fillStyle = '#202020'
+    ctx.fillStyle = '#404040'
     ctx.beginPath()
     ctx.arc(dispX, dispY, dispRad, 0, PI*2)
     ctx.fill()
     ctx.clip()
 
-    sepRad = @rad / vp.sep ** .5
-    ctx.beginPath()
-    ctx.fillStyle = '#404040'
-    ctx.arc(dispX, dispY, sepRad * vp.unit / vp.sep, 0, PI*2)
-    ctx.fill()
+    sepRad = @rad / vp.sep
+    # ctx.beginPath()
+    # ctx.fillStyle = '#404040'
+    # ctx.arc(dispX, dispY, sepRad * vp.unit / vp.sep, 0, PI*2)
+    # ctx.fill()
 
     # Files
     if @files.length > 0
       inRad = sepRad - (sepRad / vp.sep ** 2)
-      ctx.fillStyle = '#202020'
+
+      # Inner circle
+      ctx.fillStyle = '#303030'
       ctx.beginPath()
       ctx.arc(dispX, dispY, inRad * vp.unit, 0, PI*2)
       ctx.fill()
+
       ctx.fillStyle = '#606060'
       nFiles = @files.length
       slice = PI * 2 / nFiles
       area = (sepRad ** 2 - inRad ** 2) * PI
       wishRad = min(sqrt(area * areaLoss / nFiles / PI), (sepRad - inRad) / 2)
-      fileDispRad = wishRad / vp.sep * vp.unit
-      fileDist = inRad + (sepRad - inRad) / 2
-      # console.log(nFiles, inRad, slice, area, wishRad, fileDist)
+      fileDist = sepRad - wishRad
+      wishAngle = asin(wishRad / fileDist)
+      squash = ceil(wishAngle / (slice / 2))
+      if squash > 1
+        fileDist = sepRad - wishRad
+        if nFiles % squash == 1
+          pull = (wishAngle - slice / 2) / nFiles
+          slice -= pull * 2
+      # console.log(@name, "slice:", slice, "wishAngle:", wishAngle, "Squash:", squash)
+      fileDispRad = wishRad * vp.unit   # / vp.sep
+      lastDist = 0
       for f, i in @files
+        step = i % squash
+        if step == 0
+          squashDist = fileDist
+        else
+          squashDist = lastDist * cos(slice) - sqrt((wishRad * 2) ** 2 - lastDist ** 2 * sin(slice) ** 2)
+        # console.log(@name, "step:", step, "squashDist:", squashDist, "lastDist:", lastDist)
         fDir = i * slice - PI / 2
-        fX = (@x + cos(fDir) * fileDist) * vp.unit + vp.cx
-        fY = (@y + sin(fDir) * fileDist) * vp.unit + vp.cy
+        fX = (@x + cos(fDir) * squashDist) * vp.unit + vp.cx
+        fY = (@y + sin(fDir) * squashDist) * vp.unit + vp.cy
         ctx.beginPath()
         ctx.arc(fX, fY, fileDispRad, 0, 2*PI)
         ctx.fill()
+        lastDist = squashDist
 
     # Name
     ctx.fillStyle = '#a0a0a0'

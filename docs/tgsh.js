@@ -1,7 +1,7 @@
 (function() {
-  var Node, PI, acos, areaLoss, asin, atan, bold, canvas, cos, drawScreen, fontFamily, fontHeight, fontWidth, max, min, minNameWidth, mouseDownAct, mouseMoveAct, mouseUpAct, nameFadeRad, nameFadeWidth, noTypoRad, regular, req, resizeAct, round, sin, sqrt, timer, vp, wheelAct;
+  var Node, PI, acos, areaLoss, asin, atan, bold, canvas, ceil, cos, drawScreen, fontFamily, fontHeight, fontWidth, max, min, minNameWidth, mouseDownAct, mouseMoveAct, mouseUpAct, nameFadeRad, nameFadeWidth, noTypoRad, regular, req, resizeAct, round, sin, sqrt, timer, vp, wheelAct;
 
-  ({PI, sqrt, sin, cos, asin, acos, atan, min, max, round} = Math);
+  ({PI, sqrt, sin, cos, asin, acos, atan, min, max, round, ceil} = Math);
 
   // Constants
   fontHeight = 14;
@@ -132,7 +132,7 @@
     }
 
     draw(ctx) {
-      var area, d, ddX, ddY, dir, dispRad, dispX, dispY, f, fDir, fX, fY, fileDispRad, fileDist, flagRad, flagSlice, flagStartX, flagStartY, i, inRad, j, k, l, len, len1, len2, lw, nFiles, nx, ref, ref1, ref2, results, sepRad, slice, typoBase, wishRad;
+      var area, d, ddX, ddY, dir, dispRad, dispX, dispY, f, fDir, fX, fY, fileDispRad, fileDist, flagRad, flagSlice, flagStartX, flagStartY, i, inRad, j, k, l, lastDist, len, len1, len2, lw, nFiles, nx, pull, ref, ref1, ref2, results, sepRad, slice, squash, squashDist, step, typoBase, wishAngle, wishRad;
       // Calculate details
       dispRad = this.rad * vp.unit / vp.sep;
       dispX = vp.cx + this.x * vp.unit;
@@ -181,20 +181,22 @@
         }
       }
       // Body
-      ctx.fillStyle = '#202020';
+      ctx.fillStyle = '#404040';
       ctx.beginPath();
       ctx.arc(dispX, dispY, dispRad, 0, PI * 2);
       ctx.fill();
       ctx.clip();
-      sepRad = this.rad / vp.sep ** .5;
-      ctx.beginPath();
-      ctx.fillStyle = '#404040';
-      ctx.arc(dispX, dispY, sepRad * vp.unit / vp.sep, 0, PI * 2);
-      ctx.fill();
+      sepRad = this.rad / vp.sep;
+      // ctx.beginPath()
+      // ctx.fillStyle = '#404040'
+      // ctx.arc(dispX, dispY, sepRad * vp.unit / vp.sep, 0, PI*2)
+      // ctx.fill()
+
       // Files
       if (this.files.length > 0) {
         inRad = sepRad - (sepRad / vp.sep ** 2);
-        ctx.fillStyle = '#202020';
+        // Inner circle
+        ctx.fillStyle = '#303030';
         ctx.beginPath();
         ctx.arc(dispX, dispY, inRad * vp.unit, 0, PI * 2);
         ctx.fill();
@@ -203,18 +205,36 @@
         slice = PI * 2 / nFiles;
         area = (sepRad ** 2 - inRad ** 2) * PI;
         wishRad = min(sqrt(area * areaLoss / nFiles / PI), (sepRad - inRad) / 2);
-        fileDispRad = wishRad / vp.sep * vp.unit;
-        fileDist = inRad + (sepRad - inRad) / 2;
+        fileDist = sepRad - wishRad;
+        wishAngle = asin(wishRad / fileDist);
+        squash = ceil(wishAngle / (slice / 2));
+        if (squash > 1) {
+          fileDist = sepRad - wishRad;
+          if (nFiles % squash === 1) {
+            pull = (wishAngle - slice / 2) / nFiles;
+            slice -= pull * 2;
+          }
+        }
+        // console.log(@name, "slice:", slice, "wishAngle:", wishAngle, "Squash:", squash)
+        fileDispRad = wishRad * vp.unit; // / vp.sep
+        lastDist = 0;
         ref1 = this.files;
-        // console.log(nFiles, inRad, slice, area, wishRad, fileDist)
         for (i = k = 0, len1 = ref1.length; k < len1; i = ++k) {
           f = ref1[i];
+          step = i % squash;
+          if (step === 0) {
+            squashDist = fileDist;
+          } else {
+            squashDist = lastDist * cos(slice) - sqrt((wishRad * 2) ** 2 - lastDist ** 2 * sin(slice) ** 2);
+          }
+          // console.log(@name, "step:", step, "squashDist:", squashDist, "lastDist:", lastDist)
           fDir = i * slice - PI / 2;
-          fX = (this.x + cos(fDir) * fileDist) * vp.unit + vp.cx;
-          fY = (this.y + sin(fDir) * fileDist) * vp.unit + vp.cy;
+          fX = (this.x + cos(fDir) * squashDist) * vp.unit + vp.cx;
+          fY = (this.y + sin(fDir) * squashDist) * vp.unit + vp.cy;
           ctx.beginPath();
           ctx.arc(fX, fY, fileDispRad, 0, 2 * PI);
           ctx.fill();
+          lastDist = squashDist;
         }
       }
       // Name
