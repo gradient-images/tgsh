@@ -1,5 +1,8 @@
 {PI, sqrt, sin, cos, asin, acos, atan, min, max, round, ceil} = Math
 
+dist = (x, y) ->
+  sqrt(x ** 2 + y ** 2)
+
 # Constants
 fontHeight = 14
 fontWidth = fontHeight * .75
@@ -8,9 +11,9 @@ fontFamily = 'Roboto Mono'
 regular = fontHeight + 'px ' + fontFamily
 bold = 'bold ' + fontHeight + 'px ' + fontFamily
 minNameWidth = 1 * fontWidth
-noTypoRad = sqrt((minNameWidth / 2) ** 2 + (fontHeight / 2) ** 2)
+noTypoRad = dist(minNameWidth / 2, fontHeight / 2)
 nameFadeWidth = 2 * fontWidth
-nameFadeRad = sqrt((nameFadeWidth / 2) ** 2 + (fontHeight / 2) ** 2)
+nameFadeRad = dist(nameFadeWidth / 2, fontHeight / 2)
 
 # areaLoss = PI / 4 * .5
 gr = (1 + 5**.5) / 2
@@ -70,7 +73,7 @@ class Node
           @files.push(new Node(kid))
 
   layout: (@x=0, @y=0, @rad=1, @slice=PI, @dir = 0) ->
-    dist = sqrt(@x ** 2 + @y ** 2)
+    nDist = dist(@x, @y)
 
     if @dirs.length > 0
       nDirs = @dirs.length
@@ -84,7 +87,7 @@ class Node
         @hideDirs = true
       else
         @hideDirs = false
-        dirDist = dist + (@rad + wishRad) * vp.sep
+        dirDist = nDist + (@rad + wishRad) * vp.sep
         wishSlice = asin(wishRad / dirDist)
         dirSlice = @slice / nDirs
 
@@ -121,7 +124,7 @@ class Node
       if @hideDirs
         # flagRad = @rad * vp.sep ** 4
         flagRad = @rad * (1 + .0333 / (vp.scale * @rad))
-        flagSlice = (PI / 2 + asin(@rad / vp.sep / sqrt(@x ** 2 + @y ** 2)) \
+        flagSlice = (PI / 2 + asin(@rad / vp.sep / dist(@x, @y)) \
             - acos(@rad / vp.sep / flagRad)) / vp.sep
         flagStartX = flagRad * cos(@dir - flagSlice) + @x
         flagStartY = flagRad * sin(@dir - flagSlice) + @y

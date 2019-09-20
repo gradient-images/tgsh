@@ -1,7 +1,11 @@
 (function() {
-  var Node, PI, acos, asin, atan, bold, canvas, ceil, cos, drawScreen, fontFamily, fontHeight, fontWidth, ga, gr, max, min, minNameWidth, mouseDownAct, mouseMoveAct, mouseUpAct, nameFadeRad, nameFadeWidth, noTypoRad, regular, req, resizeAct, round, sin, sqrt, timer, vp, wheelAct;
+  var Node, PI, acos, asin, atan, bold, canvas, ceil, cos, dist, drawScreen, fontFamily, fontHeight, fontWidth, ga, gr, max, min, minNameWidth, mouseDownAct, mouseMoveAct, mouseUpAct, nameFadeRad, nameFadeWidth, noTypoRad, regular, req, resizeAct, round, sin, sqrt, timer, vp, wheelAct;
 
   ({PI, sqrt, sin, cos, asin, acos, atan, min, max, round, ceil} = Math);
+
+  dist = function(x, y) {
+    return sqrt(x ** 2 + y ** 2);
+  };
 
   // Constants
   fontHeight = 14;
@@ -16,11 +20,11 @@
 
   minNameWidth = 1 * fontWidth;
 
-  noTypoRad = sqrt((minNameWidth / 2) ** 2 + (fontHeight / 2) ** 2);
+  noTypoRad = dist(minNameWidth / 2, fontHeight / 2);
 
   nameFadeWidth = 2 * fontWidth;
 
-  nameFadeRad = sqrt((nameFadeWidth / 2) ** 2 + (fontHeight / 2) ** 2);
+  nameFadeRad = dist(nameFadeWidth / 2, fontHeight / 2);
 
   // areaLoss = PI / 4 * .5
   gr = (1 + 5 ** .5) / 2;
@@ -86,14 +90,14 @@
       }
     }
 
-    layout(x = 0, y = 0, rad = 1, slice = PI, dir1 = 0) {
-      var dir, dirDist, dirRad, dirSlice, dist, firstDirDir, i, j, kidDir, len, nDirs, ref, wishRad, wishSlice;
-      this.x = x;
-      this.y = y;
+    layout(x1 = 0, y1 = 0, rad = 1, slice = PI, dir1 = 0) {
+      var dir, dirDist, dirRad, dirSlice, firstDirDir, i, j, kidDir, len, nDirs, nDist, ref, wishRad, wishSlice;
+      this.x = x1;
+      this.y = y1;
       this.rad = rad;
       this.slice = slice;
       this.dir = dir1;
-      dist = sqrt(this.x ** 2 + this.y ** 2);
+      nDist = dist(this.x, this.y);
       if (this.dirs.length > 0) {
         nDirs = this.dirs.length;
         if (nDirs === 1) {
@@ -105,7 +109,7 @@
           this.hideDirs = true;
         } else {
           this.hideDirs = false;
-          dirDist = dist + (this.rad + wishRad) * vp.sep;
+          dirDist = nDist + (this.rad + wishRad) * vp.sep;
           wishSlice = asin(wishRad / dirDist);
           dirSlice = this.slice / nDirs;
           if (wishSlice < dirSlice) {
@@ -144,7 +148,7 @@
         if (this.hideDirs) {
           // flagRad = @rad * vp.sep ** 4
           flagRad = this.rad * (1 + .0333 / (vp.scale * this.rad));
-          flagSlice = (PI / 2 + asin(this.rad / vp.sep / sqrt(this.x ** 2 + this.y ** 2)) - acos(this.rad / vp.sep / flagRad)) / vp.sep;
+          flagSlice = (PI / 2 + asin(this.rad / vp.sep / dist(this.x, this.y)) - acos(this.rad / vp.sep / flagRad)) / vp.sep;
           flagStartX = flagRad * cos(this.dir - flagSlice) + this.x;
           flagStartY = flagRad * sin(this.dir - flagSlice) + this.y;
           // console.log(flagRad, @slice, flagSlice, flagStartX, flagStartY)
