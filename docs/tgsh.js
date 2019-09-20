@@ -1,5 +1,5 @@
 (function() {
-  var Node, PI, acos, areaLoss, asin, atan, bold, canvas, ceil, cos, drawScreen, fontFamily, fontHeight, fontWidth, max, min, minNameWidth, mouseDownAct, mouseMoveAct, mouseUpAct, nameFadeRad, nameFadeWidth, noTypoRad, regular, req, resizeAct, round, sin, sqrt, timer, vp, wheelAct;
+  var Node, PI, acos, asin, atan, bold, canvas, ceil, cos, drawScreen, fontFamily, fontHeight, fontWidth, ga, gr, max, min, minNameWidth, mouseDownAct, mouseMoveAct, mouseUpAct, nameFadeRad, nameFadeWidth, noTypoRad, regular, req, resizeAct, round, sin, sqrt, timer, vp, wheelAct;
 
   ({PI, sqrt, sin, cos, asin, acos, atan, min, max, round, ceil} = Math);
 
@@ -22,10 +22,11 @@
 
   nameFadeRad = sqrt((nameFadeWidth / 2) ** 2 + (fontHeight / 2) ** 2);
 
-  areaLoss = PI / 4 * .5;
+  // areaLoss = PI / 4 * .5
+  gr = (1 + 5 ** .5) / 2;
 
-  // gr = (1 + 5**.5) / 2
-  // ga = PI*2 / gr**2
+  ga = PI * 2 / gr ** 2;
+
   timer = performance.now();
 
   canvas = document.getElementById('canvas');
@@ -85,12 +86,12 @@
       }
     }
 
-    layout(x = 0, y = 0, rad = 1, slice1 = PI, dir1 = 0) {
+    layout(x = 0, y = 0, rad = 1, slice = PI, dir1 = 0) {
       var dir, dirDist, dirRad, dirSlice, dist, firstDirDir, i, j, kidDir, len, nDirs, ref, wishRad, wishSlice;
       this.x = x;
       this.y = y;
       this.rad = rad;
-      this.slice = slice1;
+      this.slice = slice;
       this.dir = dir1;
       dist = sqrt(this.x ** 2 + this.y ** 2);
       if (this.dirs.length > 0) {
@@ -132,7 +133,7 @@
     }
 
     draw(ctx) {
-      var area, d, ddX, ddY, dir, dispRad, dispX, dispY, f, fDir, fX, fY, fileDispRad, fileDist, flagRad, flagSlice, flagStartX, flagStartY, i, inRad, j, k, l, lastDist, len, len1, len2, lw, nFiles, nx, pull, ref, ref1, ref2, results, sepRad, slice, squash, squashDist, step, typoBase, wishAngle, wishRad;
+      var d, ddX, ddY, dir, dispRad, dispX, dispY, f, fAreaRad, fDir, fDispWidth, fDist, fX, fY, flagRad, flagSlice, flagStartX, flagStartY, i, inRad, j, k, l, len, len1, len2, lw, nFiles, nx, primScale, ref, ref1, ref2, results, scale, typoBase;
       // Calculate details
       dispRad = this.rad * vp.unit / vp.sep;
       dispX = vp.cx + this.x * vp.unit;
@@ -170,10 +171,9 @@
               ctx.strokeStyle = '#303030';
               ctx.stroke();
               ctx.lineWidth = lw * .75;
-              ctx.strokeStyle = '#909090';
+              ctx.strokeStyle = '#606060';
               ctx.stroke();
               ctx.lineWidth = lw;
-              ctx.strokeStyle = '#606060';
             } else {
               ctx.stroke();
             }
@@ -186,59 +186,38 @@
       ctx.arc(dispX, dispY, dispRad, 0, PI * 2);
       ctx.fill();
       ctx.clip();
-      sepRad = this.rad / vp.sep;
-      // ctx.beginPath()
-      // ctx.fillStyle = '#404040'
-      // ctx.arc(dispX, dispY, sepRad * vp.unit / vp.sep, 0, PI*2)
-      // ctx.fill()
-
+      // Inner circle
+      ctx.fillStyle = '#303030';
+      ctx.beginPath();
+      ctx.arc(dispX, dispY, inRad * vp.unit, 0, PI * 2);
+      ctx.fill();
       // Files
-      if (this.files.length > 0) {
-        inRad = sepRad - (sepRad / vp.sep ** 2);
-        // Inner circle
-        ctx.fillStyle = '#303030';
-        ctx.beginPath();
-        ctx.arc(dispX, dispY, inRad * vp.unit, 0, PI * 2);
-        ctx.fill();
+      fAreaRad = this.rad / vp.sep ** 1.5;
+      // inRad = fAreaRad - fAreaRad / vp.sep ** .5
+      inRad = vp.sep - 1;
+      nFiles = this.files.length;
+      if (nFiles > 0) {
+        primScale = 1 / sqrt((1 + nFiles * (1 + inRad)) * gr);
+        scale = fAreaRad * primScale * (1 - primScale);
+        // fDispRad = scale * vp.unit
+        fDispWidth = sqrt(2) * scale * vp.unit;
         ctx.fillStyle = '#606060';
-        nFiles = this.files.length;
-        slice = PI * 2 / nFiles;
-        area = (sepRad ** 2 - inRad ** 2) * PI;
-        wishRad = min(sqrt(area * areaLoss / nFiles / PI), (sepRad - inRad) / 2);
-        fileDist = sepRad - wishRad;
-        wishAngle = asin(wishRad / fileDist);
-        squash = ceil(wishAngle / (slice / 2));
-        if (squash > 1) {
-          fileDist = sepRad - wishRad;
-          if (nFiles % squash === 1) {
-            pull = (wishAngle - slice / 2) / nFiles;
-            slice -= pull * 2;
-          }
-        }
-        // console.log(@name, "slice:", slice, "wishAngle:", wishAngle, "Squash:", squash)
-        fileDispRad = wishRad * vp.unit; // / vp.sep
-        lastDist = 0;
         ref1 = this.files;
         for (i = k = 0, len1 = ref1.length; k < len1; i = ++k) {
           f = ref1[i];
-          step = i % squash;
-          if (step === 0) {
-            squashDist = fileDist;
-          } else {
-            squashDist = lastDist * cos(slice) - sqrt((wishRad * 2) ** 2 - lastDist ** 2 * sin(slice) ** 2);
-          }
-          // console.log(@name, "step:", step, "squashDist:", squashDist, "lastDist:", lastDist)
-          fDir = i * slice - PI / 2;
-          fX = (this.x + cos(fDir) * squashDist) * vp.unit + vp.cx;
-          fY = (this.y + sin(fDir) * squashDist) * vp.unit + vp.cy;
+          fDist = sqrt((1 + (nFiles - i) + nFiles * inRad) * gr) * scale;
+          fDir = ga * i - PI / 2;
+          // console.log(@name, "scale:", scale, "fDist:", fDist, "fDispRad:", fDispRad)
+          fX = (this.x + cos(fDir) * fDist) * vp.unit + vp.cx - fDispWidth / 2;
+          fY = (this.y + sin(fDir) * fDist) * vp.unit + vp.cy - fDispWidth / 2;
           ctx.beginPath();
-          ctx.arc(fX, fY, fileDispRad, 0, 2 * PI);
+          ctx.fillRect(fX, fY, fDispWidth, fDispWidth);
+          // ctx.arc(fX, fY, fDispRad, 0, 2*PI)
           ctx.fill();
-          lastDist = squashDist;
         }
       }
       // Name
-      ctx.fillStyle = '#a0a0a0';
+      ctx.fillStyle = '#c0c0c0';
       if (dispRad > noTypoRad) {
         typoBase = 2 * sqrt(dispRad ** 2 - (fontHeight / 2) ** 2);
         // Align
@@ -334,6 +313,7 @@
 
   req.open('GET', 'https://gradient-images.github.io/tgsh/tgsh_tree.json');
 
+  // req.open('GET', 'https://gradient-images.github.io/tgsh/teflon_tree.json')
   req.responseType = 'json';
 
   req.onload = function() {

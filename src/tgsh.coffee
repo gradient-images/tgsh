@@ -11,9 +11,10 @@ minNameWidth = 1 * fontWidth
 noTypoRad = sqrt((minNameWidth / 2) ** 2 + (fontHeight / 2) ** 2)
 nameFadeWidth = 2 * fontWidth
 nameFadeRad = sqrt((nameFadeWidth / 2) ** 2 + (fontHeight / 2) ** 2)
-areaLoss = PI / 4 * .5
-# gr = (1 + 5**.5) / 2
-# ga = PI*2 / gr**2
+
+# areaLoss = PI / 4 * .5
+gr = (1 + 5**.5) / 2
+ga = PI*2 / gr**2
 
 timer = performance.now()
 canvas = document.getElementById('canvas')
@@ -44,7 +45,6 @@ vp =
     @unit = @min / @sep / 2 * @scale
     @cx = w / 2 + @offx * @unit
     @cy = h / 2 + @offy * @unit
-
 
 
 class Node
@@ -147,10 +147,9 @@ class Node
             ctx.strokeStyle = '#303030'
             ctx.stroke()
             ctx.lineWidth = lw * .75
-            ctx.strokeStyle = '#909090'
+            ctx.strokeStyle = '#606060'
             ctx.stroke()
             ctx.lineWidth = lw
-            ctx.strokeStyle = '#606060'
           else
             ctx.stroke()
 
@@ -161,55 +160,37 @@ class Node
     ctx.fill()
     ctx.clip()
 
-    sepRad = @rad / vp.sep
-    # ctx.beginPath()
-    # ctx.fillStyle = '#404040'
-    # ctx.arc(dispX, dispY, sepRad * vp.unit / vp.sep, 0, PI*2)
-    # ctx.fill()
+    # Inner circle
+    ctx.fillStyle = '#303030'
+    ctx.beginPath()
+    ctx.arc(dispX, dispY, inRad * vp.unit, 0, PI*2)
+    ctx.fill()
 
     # Files
-    if @files.length > 0
-      inRad = sepRad - (sepRad / vp.sep ** 2)
-
-      # Inner circle
-      ctx.fillStyle = '#303030'
-      ctx.beginPath()
-      ctx.arc(dispX, dispY, inRad * vp.unit, 0, PI*2)
-      ctx.fill()
+    fAreaRad = @rad / vp.sep ** 1.5
+    # inRad = fAreaRad - fAreaRad / vp.sep ** .5
+    inRad = vp.sep - 1
+    nFiles = @files.length
+    if nFiles > 0
+      primScale = 1 / sqrt((1 + nFiles * (1 + inRad)) * gr)
+      scale = fAreaRad * primScale * (1 - primScale)
+      # fDispRad = scale * vp.unit
+      fDispWidth = sqrt(2) * scale * vp.unit
 
       ctx.fillStyle = '#606060'
-      nFiles = @files.length
-      slice = PI * 2 / nFiles
-      area = (sepRad ** 2 - inRad ** 2) * PI
-      wishRad = min(sqrt(area * areaLoss / nFiles / PI), (sepRad - inRad) / 2)
-      fileDist = sepRad - wishRad
-      wishAngle = asin(wishRad / fileDist)
-      squash = ceil(wishAngle / (slice / 2))
-      if squash > 1
-        fileDist = sepRad - wishRad
-        if nFiles % squash == 1
-          pull = (wishAngle - slice / 2) / nFiles
-          slice -= pull * 2
-      # console.log(@name, "slice:", slice, "wishAngle:", wishAngle, "Squash:", squash)
-      fileDispRad = wishRad * vp.unit   # / vp.sep
-      lastDist = 0
       for f, i in @files
-        step = i % squash
-        if step == 0
-          squashDist = fileDist
-        else
-          squashDist = lastDist * cos(slice) - sqrt((wishRad * 2) ** 2 - lastDist ** 2 * sin(slice) ** 2)
-        # console.log(@name, "step:", step, "squashDist:", squashDist, "lastDist:", lastDist)
-        fDir = i * slice - PI / 2
-        fX = (@x + cos(fDir) * squashDist) * vp.unit + vp.cx
-        fY = (@y + sin(fDir) * squashDist) * vp.unit + vp.cy
+        fDist = sqrt((1 + (nFiles - i) + nFiles * inRad) * gr) * scale
+        fDir = ga * i - PI / 2
+        # console.log(@name, "scale:", scale, "fDist:", fDist, "fDispRad:", fDispRad)
+        fX = (@x + cos(fDir) * fDist) * vp.unit + vp.cx - fDispWidth / 2
+        fY = (@y + sin(fDir) * fDist) * vp.unit + vp.cy - fDispWidth / 2
         ctx.beginPath()
-        ctx.arc(fX, fY, fileDispRad, 0, 2*PI)
+        ctx.fillRect(fX, fY, fDispWidth, fDispWidth)
+        # ctx.arc(fX, fY, fDispRad, 0, 2*PI)
         ctx.fill()
-        lastDist = squashDist
 
     # Name
-    ctx.fillStyle = '#a0a0a0'
+    ctx.fillStyle = '#c0c0c0'
     if dispRad > noTypoRad
       typoBase = 2 * sqrt(dispRad ** 2 - (fontHeight / 2) ** 2)
 
@@ -291,6 +272,7 @@ mouseUpAct = (e) ->
 
 req = new XMLHttpRequest()
 req.open('GET', 'https://gradient-images.github.io/tgsh/tgsh_tree.json')
+# req.open('GET', 'https://gradient-images.github.io/tgsh/teflon_tree.json')
 req.responseType = 'json'
 req.onload = ->
   vp.root = new Node(req.response[0])
