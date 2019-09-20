@@ -27,6 +27,8 @@ vp =
   rot: -PI / 2
   offx: 0
   offy: 0
+  pX: 0
+  pY: 0
   sep: 1.1
   fat: 1.1
   panning: false
@@ -123,7 +125,9 @@ class Node
     if @dirs.length > 0
       if @hideDirs
         # flagRad = @rad * vp.sep ** 4
-        flagRad = @rad * (1 + .0333 / (vp.scale * @rad))
+        # flagRad = @rad * (1 + .0333 / vp.scale * @rad))
+        sRad = @rad * vp.scale
+        flagRad = @rad + .02 / vp.scale
         flagSlice = (PI / 2 + asin(@rad / vp.sep / dist(@x, @y)) \
             - acos(@rad / vp.sep / flagRad)) / vp.sep
         flagStartX = flagRad * cos(@dir - flagSlice) + @x
@@ -156,6 +160,13 @@ class Node
           else
             ctx.stroke()
 
+    # Selection indicator
+    if dist(dispX - vp.pX, dispY - vp.pY) < dispRad
+      ctx.beginPath()
+      ctx.fillStyle = '#c0c0c0'
+      ctx.arc(dispX, dispY, dispRad + 5, 0, PI*2)
+      ctx.fill()
+
     # Body
     ctx.fillStyle = '#404040'
     ctx.beginPath()
@@ -171,7 +182,6 @@ class Node
 
     # Files
     fAreaRad = @rad / vp.sep ** 1.5
-    # inRad = fAreaRad - fAreaRad / vp.sep ** .5
     inRad = vp.sep - 1
     nFiles = @files.length
     if nFiles > 0
@@ -266,7 +276,9 @@ mouseMoveAct = (e) ->
     vp.offx = vp.panstx + (e.clientX - vp.panx) / vp.unit
     vp.offy = vp.pansty + (e.clientY - vp.pany) / vp.unit
     vp.update()
-    window.requestAnimationFrame(drawScreen)
+  vp.pX = e.clientX
+  vp.pY = e.clientY
+  window.requestAnimationFrame(drawScreen)
 
 mouseUpAct = (e) ->
   vp.panning = false

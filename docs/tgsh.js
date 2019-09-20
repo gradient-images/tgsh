@@ -40,6 +40,8 @@
     rot: -PI / 2,
     offx: 0,
     offy: 0,
+    pX: 0,
+    pY: 0,
     sep: 1.1,
     fat: 1.1,
     panning: false,
@@ -137,7 +139,7 @@
     }
 
     draw(ctx) {
-      var d, ddX, ddY, dir, dispRad, dispX, dispY, f, fAreaRad, fDir, fDispWidth, fDist, fX, fY, flagRad, flagSlice, flagStartX, flagStartY, i, inRad, j, k, l, len, len1, len2, lw, nFiles, nx, primScale, ref, ref1, ref2, results, scale, typoBase;
+      var d, ddX, ddY, dir, dispRad, dispX, dispY, f, fAreaRad, fDir, fDispWidth, fDist, fX, fY, flagRad, flagSlice, flagStartX, flagStartY, i, inRad, j, k, l, len, len1, len2, lw, nFiles, nx, primScale, ref, ref1, ref2, results, sRad, scale, typoBase;
       // Calculate details
       dispRad = this.rad * vp.unit / vp.sep;
       dispX = vp.cx + this.x * vp.unit;
@@ -147,7 +149,9 @@
       if (this.dirs.length > 0) {
         if (this.hideDirs) {
           // flagRad = @rad * vp.sep ** 4
-          flagRad = this.rad * (1 + .0333 / (vp.scale * this.rad));
+          // flagRad = @rad * (1 + .0333 / vp.scale * @rad))
+          sRad = this.rad * vp.scale;
+          flagRad = this.rad + .02 / vp.scale;
           flagSlice = (PI / 2 + asin(this.rad / vp.sep / dist(this.x, this.y)) - acos(this.rad / vp.sep / flagRad)) / vp.sep;
           flagStartX = flagRad * cos(this.dir - flagSlice) + this.x;
           flagStartY = flagRad * sin(this.dir - flagSlice) + this.y;
@@ -184,6 +188,13 @@
           }
         }
       }
+      // Selection indicator
+      if (dist(dispX - vp.pX, dispY - vp.pY) < dispRad) {
+        ctx.beginPath();
+        ctx.fillStyle = '#c0c0c0';
+        ctx.arc(dispX, dispY, dispRad + 5, 0, PI * 2);
+        ctx.fill();
+      }
       // Body
       ctx.fillStyle = '#404040';
       ctx.beginPath();
@@ -197,7 +208,6 @@
       ctx.fill();
       // Files
       fAreaRad = this.rad / vp.sep ** 1.5;
-      // inRad = fAreaRad - fAreaRad / vp.sep ** .5
       inRad = vp.sep - 1;
       nFiles = this.files.length;
       if (nFiles > 0) {
@@ -304,8 +314,10 @@
       vp.offx = vp.panstx + (e.clientX - vp.panx) / vp.unit;
       vp.offy = vp.pansty + (e.clientY - vp.pany) / vp.unit;
       vp.update();
-      return window.requestAnimationFrame(drawScreen);
     }
+    vp.pX = e.clientX;
+    vp.pY = e.clientY;
+    return window.requestAnimationFrame(drawScreen);
   };
 
   mouseUpAct = function(e) {
