@@ -131,7 +131,7 @@
       }
       // Fatsy root
       if (this.rad === 1) {
-        return this.rad = vp.sep;
+        return this.rad = vp.fat;
       }
     }
 
@@ -145,14 +145,15 @@
       // Draw lines
       if (this.dirs.length > 0) {
         if (this.hideDirs) {
-          // flagRad = @rad * vp.sep ** 4
-          // flagRad = @rad * (1 + .0333 / vp.scale * @rad))
           sRad = this.rad * vp.scale;
           flagRad = this.rad + .02 / vp.scale;
           flagSlice = (PI / 2 + asin(this.rad / vp.sep / dist(this.x, this.y)) - acos(this.rad / vp.sep / flagRad)) / vp.sep;
+          if (this.rad === vp.fat) {
+            flagSlice = PI / 4;
+            console.log(flagSlice);
+          }
           flagStartX = flagRad * cos(this.dir - flagSlice) + this.x;
           flagStartY = flagRad * sin(this.dir - flagSlice) + this.y;
-          // console.log(flagRad, @slice, flagSlice, flagStartX, flagStartY)
           ctx.beginPath();
           ctx.moveTo(dispX, dispY);
           ctx.lineTo(vp.cx + flagStartX * vp.unit, vp.cy + flagStartY * vp.unit);
@@ -161,7 +162,7 @@
           ctx.fill();
         } else {
           ctx.lineWidth = dispRad * .15 / this.dirs.length ** .5;
-          ctx.strokeStyle = '#606060';
+          ctx.strokeStyle = '#505050';
           ref = this.dirs;
           for (i = j = 0, len = ref.length; j < len; i = ++j) {
             d = ref[i];
@@ -173,10 +174,10 @@
             if (i === 0) {
               lw = ctx.lineWidth;
               ctx.lineWidth = lw * 1.333;
-              ctx.strokeStyle = '#303030';
+              ctx.strokeStyle = '#404040';
               ctx.stroke();
               ctx.lineWidth = lw * .75;
-              ctx.strokeStyle = '#606060';
+              ctx.strokeStyle = '#505050';
               ctx.stroke();
               ctx.lineWidth = lw;
             } else {
@@ -189,7 +190,7 @@
       if (dist(dispX - vp.pX, dispY - vp.pY) < dispRad) {
         ctx.beginPath();
         ctx.fillStyle = '#c0c0c0';
-        ctx.arc(dispX, dispY, dispRad + 5, 0, PI * 2);
+        ctx.arc(dispX, dispY, dispRad + 3, 0, PI * 2);
         ctx.fill();
       }
       // Body
@@ -212,23 +213,34 @@
         scale = fAreaRad * primScale * (1 - primScale);
         // fDispRad = scale * vp.unit
         fDispWidth = sqrt(2) * scale * vp.unit;
-        ctx.fillStyle = '#606060';
-        ref1 = this.files;
-        for (i = k = 0, len1 = ref1.length; k < len1; i = ++k) {
-          f = ref1[i];
-          fDist = sqrt((1 + (nFiles - i) + nFiles * inRad) * gr) * scale;
-          fDir = ga * i - PI / 2;
-          // console.log(@name, "scale:", scale, "fDist:", fDist, "fDispRad:", fDispRad)
-          fX = (this.x + cos(fDir) * fDist) * vp.unit + vp.cx - fDispWidth / 2;
-          fY = (this.y + sin(fDir) * fDist) * vp.unit + vp.cy - fDispWidth / 2;
+        if (scale * vp.scale > vp.minDispRad / 2) {
+          ctx.fillStyle = '#606060';
+          ref1 = this.files;
+          for (i = k = 0, len1 = ref1.length; k < len1; i = ++k) {
+            f = ref1[i];
+            fDist = sqrt((1 + (nFiles - i) + nFiles * inRad) * gr) * scale;
+            fDir = ga * i - PI / 2;
+            // console.log(@name, "scale:", scale, "fDist:", fDist, "fDispRad:", fDispRad)
+            fX = (this.x + cos(fDir) * fDist) * vp.unit + vp.cx - fDispWidth / 2;
+            fY = (this.y + sin(fDir) * fDist) * vp.unit + vp.cy - fDispWidth / 2;
+            ctx.beginPath();
+            ctx.fillRect(fX, fY, fDispWidth, fDispWidth);
+            // ctx.arc(fX, fY, fDispRad, 0, 2*PI)
+            ctx.fill();
+          }
+        } else {
+          ctx.fillStyle = '#505050';
           ctx.beginPath();
-          ctx.fillRect(fX, fY, fDispWidth, fDispWidth);
-          // ctx.arc(fX, fY, fDispRad, 0, 2*PI)
+          ctx.arc(dispX, dispY, this.rad / vp.sep ** 3 * vp.unit, 0, PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#404040';
+          ctx.beginPath();
+          ctx.arc(dispX, dispY, inRad * 3 * this.rad * vp.unit, 0, PI * 2);
           ctx.fill();
         }
       }
       // Name
-      ctx.fillStyle = '#c0c0c0';
+      ctx.fillStyle = '#a0a0a0';
       if (dispRad > noTypoRad) {
         typoBase = 2 * sqrt(dispRad ** 2 - (fontHeight / 2) ** 2);
         // Align

@@ -107,7 +107,7 @@ class Node
 
     # Fatsy root
     if @rad == 1
-      @rad = vp.sep
+      @rad = vp.fat
 
   draw: (ctx) ->
     # Calculate details
@@ -120,15 +120,15 @@ class Node
     # Draw lines
     if @dirs.length > 0
       if @hideDirs
-        # flagRad = @rad * vp.sep ** 4
-        # flagRad = @rad * (1 + .0333 / vp.scale * @rad))
         sRad = @rad * vp.scale
         flagRad = @rad + .02 / vp.scale
         flagSlice = (PI / 2 + asin(@rad / vp.sep / dist(@x, @y)) \
             - acos(@rad / vp.sep / flagRad)) / vp.sep
+        if @rad == vp.fat
+          flagSlice = PI / 4
+          console.log(flagSlice)
         flagStartX = flagRad * cos(@dir - flagSlice) + @x
         flagStartY = flagRad * sin(@dir - flagSlice) + @y
-        # console.log(flagRad, @slice, flagSlice, flagStartX, flagStartY)
         ctx.beginPath()
         ctx.moveTo(dispX, dispY)
         ctx.lineTo(vp.cx + flagStartX * vp.unit, vp.cy + flagStartY * vp.unit)
@@ -137,7 +137,7 @@ class Node
         ctx.fill()
       else
         ctx.lineWidth = dispRad * .15 / @dirs.length ** .5
-        ctx.strokeStyle = '#606060'
+        ctx.strokeStyle = '#505050'
         for d, i in @dirs
           ctx.beginPath()
           ctx.moveTo(dispX, dispY)
@@ -147,10 +147,10 @@ class Node
           if i == 0
             lw = ctx.lineWidth
             ctx.lineWidth = lw * 1.333
-            ctx.strokeStyle = '#303030'
+            ctx.strokeStyle = '#404040'
             ctx.stroke()
             ctx.lineWidth = lw * .75
-            ctx.strokeStyle = '#606060'
+            ctx.strokeStyle = '#505050'
             ctx.stroke()
             ctx.lineWidth = lw
           else
@@ -160,7 +160,7 @@ class Node
     if dist(dispX - vp.pX, dispY - vp.pY) < dispRad
       ctx.beginPath()
       ctx.fillStyle = '#c0c0c0'
-      ctx.arc(dispX, dispY, dispRad + 5, 0, PI*2)
+      ctx.arc(dispX, dispY, dispRad + 3, 0, PI*2)
       ctx.fill()
 
     # Body
@@ -186,20 +186,30 @@ class Node
       # fDispRad = scale * vp.unit
       fDispWidth = sqrt(2) * scale * vp.unit
 
-      ctx.fillStyle = '#606060'
-      for f, i in @files
-        fDist = sqrt((1 + (nFiles - i) + nFiles * inRad) * gr) * scale
-        fDir = ga * i - PI / 2
-        # console.log(@name, "scale:", scale, "fDist:", fDist, "fDispRad:", fDispRad)
-        fX = (@x + cos(fDir) * fDist) * vp.unit + vp.cx - fDispWidth / 2
-        fY = (@y + sin(fDir) * fDist) * vp.unit + vp.cy - fDispWidth / 2
+      if scale * vp.scale > vp.minDispRad / 2
+        ctx.fillStyle = '#606060'
+        for f, i in @files
+          fDist = sqrt((1 + (nFiles - i) + nFiles * inRad) * gr) * scale
+          fDir = ga * i - PI / 2
+          # console.log(@name, "scale:", scale, "fDist:", fDist, "fDispRad:", fDispRad)
+          fX = (@x + cos(fDir) * fDist) * vp.unit + vp.cx - fDispWidth / 2
+          fY = (@y + sin(fDir) * fDist) * vp.unit + vp.cy - fDispWidth / 2
+          ctx.beginPath()
+          ctx.fillRect(fX, fY, fDispWidth, fDispWidth)
+          # ctx.arc(fX, fY, fDispRad, 0, 2*PI)
+          ctx.fill()
+      else
+        ctx.fillStyle = '#505050'
         ctx.beginPath()
-        ctx.fillRect(fX, fY, fDispWidth, fDispWidth)
-        # ctx.arc(fX, fY, fDispRad, 0, 2*PI)
+        ctx.arc(dispX, dispY, @rad / vp.sep ** 3 * vp.unit, 0, PI*2)
+        ctx.fill()
+        ctx.fillStyle = '#404040'
+        ctx.beginPath()
+        ctx.arc(dispX, dispY, inRad * 3 * @rad * vp.unit, 0, PI*2)
         ctx.fill()
 
     # Name
-    ctx.fillStyle = '#c0c0c0'
+    ctx.fillStyle = '#a0a0a0'
     if dispRad > noTypoRad
       typoBase = 2 * sqrt(dispRad ** 2 - (fontHeight / 2) ** 2)
 
