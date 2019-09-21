@@ -38,18 +38,14 @@ vp =
   pansty: 0
   minDispRad: 0.01
   update: ->
-    w = window.innerWidth
-    h = window.innerHeight
-
-    canvas.width = w
-    canvas.height = h
-
-    @width = w
-    @height = h
-    @min = min(w, h)
+    @width = window.innerWidth
+    @height = window.innerHeight
+    canvas.width = @width
+    canvas.height = @height
+    @min = min(@width, @height)
     @unit = @min / @sep / 2 * @scale
-    @cx = w / 2 + @offx * @unit
-    @cy = h / 2 + @offy * @unit
+    @cx = @width / 2 + @offx * @unit
+    @cy = @height / 2 + @offy * @unit
 
 
 class Node
@@ -256,9 +252,11 @@ wheelAct = (e) ->
   if e.shiftKey
     vp.rot += e.deltaY / 180 / vp.scale ** .5
   else
-    scale = vp.scale
-    scale *= 1 + e.deltaY * -0.01
+    delta = e.deltaY * -0.01
+    scale = vp.scale * (1 + delta)
     scale = max(.001, Math.min(1000, scale))
+    vp.offx += (vp.width / 2 - e.clientX) * delta * vp.sep ** 2 / vp.unit
+    vp.offy += (vp.height / 2 - e.clientY) * delta * vp.sep ** 2 / vp.unit
     vp.scale = scale
     vp.update()
   window.requestAnimationFrame(drawScreen)

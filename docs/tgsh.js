@@ -51,17 +51,14 @@
     pansty: 0,
     minDispRad: 0.01,
     update: function() {
-      var h, w;
-      w = window.innerWidth;
-      h = window.innerHeight;
-      canvas.width = w;
-      canvas.height = h;
-      this.width = w;
-      this.height = h;
-      this.min = min(w, h);
+      this.width = window.innerWidth;
+      this.height = window.innerHeight;
+      canvas.width = this.width;
+      canvas.height = this.height;
+      this.min = min(this.width, this.height);
       this.unit = this.min / this.sep / 2 * this.scale;
-      this.cx = w / 2 + this.offx * this.unit;
-      return this.cy = h / 2 + this.offy * this.unit;
+      this.cx = this.width / 2 + this.offx * this.unit;
+      return this.cy = this.height / 2 + this.offy * this.unit;
     }
   };
 
@@ -287,13 +284,15 @@
   };
 
   wheelAct = function(e) {
-    var scale;
+    var delta, scale;
     if (e.shiftKey) {
       vp.rot += e.deltaY / 180 / vp.scale ** .5;
     } else {
-      scale = vp.scale;
-      scale *= 1 + e.deltaY * -0.01;
+      delta = e.deltaY * -0.01;
+      scale = vp.scale * (1 + delta);
       scale = max(.001, Math.min(1000, scale));
+      vp.offx += (vp.width / 2 - e.clientX) * delta * vp.sep ** 2 / vp.unit;
+      vp.offy += (vp.height / 2 - e.clientY) * delta * vp.sep ** 2 / vp.unit;
       vp.scale = scale;
       vp.update();
     }
