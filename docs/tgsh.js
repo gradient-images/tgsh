@@ -64,7 +64,7 @@
 
   Node = class Node {
     constructor(obj) {
-      var ctx, i, j, kid, len, nameMeasure, ref;
+      var ctx, j, kid, len, nameMeasure, ref;
       this.x = 0;
       this.y = 0;
       this.rad = 1;
@@ -78,8 +78,8 @@
       this.dirs = [];
       if (obj.contents) {
         ref = obj.contents;
-        for (i = j = 0, len = ref.length; j < len; i = ++j) {
-          kid = ref[i];
+        for (j = 0, len = ref.length; j < len; j++) {
+          kid = ref[j];
           if (kid.type === 'directory') {
             this.dirs.push(new Node(kid));
           } else if (kid.type === 'file') {
@@ -298,9 +298,9 @@
   wheelAct = function(e) {
     var delta, scale;
     if (e.shiftKey) {
-      vp.rot += e.deltaY / 180 / vp.scale ** .5;
+      vp.rot += e.deltaY / 1800 / vp.scale ** .5;
     } else {
-      delta = e.deltaY * -0.01;
+      delta = e.deltaY * -0.001;
       scale = vp.scale * (1 + delta);
       scale = max(.001, Math.min(1000, scale));
       vp.offx += (vp.width / 2 - e.clientX) * delta * vp.sep ** 2 / vp.unit;

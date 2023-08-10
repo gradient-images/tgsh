@@ -64,7 +64,7 @@ class Node
     @files = []
     @dirs = []
     if obj.contents
-      for kid, i in obj.contents
+      for kid in obj.contents
         if kid.type == 'directory'
           @dirs.push(new Node(kid))
         else if kid.type == 'file'
@@ -260,9 +260,9 @@ resizeAct = ->
 
 wheelAct = (e) ->
   if e.shiftKey
-    vp.rot += e.deltaY / 180 / vp.scale ** .5
+    vp.rot += e.deltaY / 1800 / vp.scale ** .5
   else
-    delta = e.deltaY * -0.01
+    delta = e.deltaY * -0.001
     scale = vp.scale * (1 + delta)
     scale = max(.001, Math.min(1000, scale))
     vp.offx += (vp.width / 2 - e.clientX) * delta * vp.sep ** 2 / vp.unit
